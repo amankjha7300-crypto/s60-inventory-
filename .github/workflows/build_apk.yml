@@ -25,32 +25,30 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Configure Android Project & Dependencies
+      - name: Configure Android Scaffolding & Dependencies
         run: |
           cd mobile
           rm -rf android
           flutter create --platforms=android --org in.ac.sviet.super60 --project-name s60_inventory_app .
-          
-          # Configure permissions in AndroidManifest.xml
           sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET"\/>' android/app/src/main/AndroidManifest.xml
           sed -i 's/<application/<application android:usesCleartextTraffic="true"/g' android/app/src/main/AndroidManifest.xml
-          
-          # Set minimum SDK version to 21 and target to 34
           sed -i 's/minSdkVersion = flutter.minSdkVersion/minSdkVersion = 21/g' android/app/build.gradle || true
           sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle || true
-          
-          # Set icons
           for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
             mkdir -p android/app/src/main/res/$dir
             cp assets/app_icon.png android/app/src/main/res/$dir/ic_launcher.png
           done
-          
           flutter pub get
+
+      - name: Analyze Dart Code
+        run: |
+          cd mobile
+          flutter analyze --no-fatal-infos
 
       - name: Build Android APK
         run: |
           cd mobile
-          flutter build apk --release --no-tree-shake-icons || flutter build apk --debug
+          flutter build apk --debug --verbose
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
