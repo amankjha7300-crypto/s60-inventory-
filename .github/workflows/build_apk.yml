@@ -25,15 +25,16 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install Dependencies
+      - name: Configure Android Project & Dependencies
         run: |
           cd mobile
+          flutter create --platforms=android --org in.ac.sviet.super60 .
           flutter pub get
 
       - name: Build Release APK
         run: |
           cd mobile
-          flutter build apk --release
+          flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
