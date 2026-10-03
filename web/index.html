@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>S60 Inventory & Rewards Management System</title>
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link rel="manifest" href="/portal/manifest.json">
+  <meta name="theme-color" content="#0F2B5B">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="S60 Inventory">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/portal/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <!-- 1. SPLASH / WELCOME SCREEN (Matches User Mockup) -->
+  <div id="splashView" style="display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 20px;">
+    <div style="max-width: 440px; width: 100%; text-align: center; background: var(--bg-cream); padding: 32px 24px; border-radius: 28px; box-shadow: 0 12px 40px rgba(15, 43, 91, 0.06); border: 1px solid var(--border-subtle);">
+      
+      <!-- Top Logos -->
+      <div style="display: flex; justify-content: center; align-items: center; gap: 16px; margin-bottom: 28px;">
+        <img src="/assets/sviet_logo.png" alt="SVIET Logo" style="height: 52px; object-fit: contain;">
+        <div style="width: 1px; height: 36px; background: rgba(75, 85, 99, 0.25);"></div>
+        <img src="/assets/s60_logo.png" alt="S60 Logo" style="height: 52px; object-fit: contain;">
+      </div>
+
+      <!-- Heading -->
+      <div style="text-align: left; margin-bottom: 20px;">
+        <h1 style="color: var(--primary-orange); font-size: 38px; line-height: 1.1; font-weight: 800;">S60</h1>
+        <h1 style="color: var(--primary-navy); font-size: 34px; line-height: 1.1; font-weight: 800;">Inventory &</h1>
+        <h1 style="color: var(--primary-orange); font-size: 34px; line-height: 1.1; font-weight: 800;">Rewards Portal</h1>
+        <p style="color: var(--text-gray); font-size: 14px; margin-top: 10px; line-height: 1.4;">
+          Manage event inventory and student rewards, all in one place.
+        </p>
+        <div style="width: 44px; height: 3px; background: var(--primary-orange); border-radius: 2px; margin-top: 8px;"></div>
+      </div>
+
+      <!-- Campus Visual Card -->
+      <div style="border-radius: 20px; overflow: hidden; height: 220px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); margin-bottom: 28px;">
+        <img src="/assets/sviet_campus.png" alt="SVIET Campus Building" style="width: 100%; height: 100%; object-fit: cover;">
+      </div>
+
+      <!-- Auth Portal Buttons -->
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button class="btn-primary" onclick="showLogin('signin')" style="width: 100%; justify-content: center; padding: 15px; font-size: 15px; border-radius: 14px;">
+          <i class="fa-solid fa-right-to-bracket"></i> Sign In to Portal
+        </button>
+        <button class="btn-secondary" onclick="showLogin('signup')" style="width: 100%; justify-content: center; padding: 13px; font-size: 14px; border-radius: 14px; border: 2px solid var(--primary-orange); color: var(--primary-orange); font-weight: 700; background: rgba(244, 123, 32, 0.06);">
+          <i class="fa-solid fa-user-plus"></i> Create Account / Sign Up
+        </button>
+      </div>
+
+      <!-- Footer -->
+      <div style="margin-top: 24px;">
+        <p style="font-size: 12px; font-weight: 600; letter-spacing: 2px; color: var(--primary-navy);">S 6 0 &nbsp;|&nbsp; S V I E T</p>
+        <div style="width: 32px; height: 2px; background: var(--primary-orange); margin: 6px auto 0;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. AUTHENTICATION MODAL (SIGN IN / SIGN UP PORTAL) -->
+  <div id="loginModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 460px; text-align: center; padding: 28px;">
+      
+      <!-- Modal Header with Official Logos -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <img src="/assets/sviet_logo.png" alt="SVIET" style="height: 38px; object-fit: contain;">
+          <div style="width: 1px; height: 28px; background: var(--border-subtle);"></div>
+          <img src="/assets/s60_logo.png" alt="S60" style="height: 38px; object-fit: contain;">
+        </div>
+        <button onclick="closeModal('loginModal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer; color: var(--text-gray);">&times;</button>
+      </div>
+
+      <!-- Segmented Tab Switcher -->
+      <div style="display: flex; background: var(--surface-gray); border-radius: 12px; padding: 4px; margin: 16px 0 20px; gap: 4px;">
+        <button id="authTabSignIn" type="button" onclick="switchAuthTab('signin')" style="flex: 1; padding: 10px; border: none; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; background: var(--white); color: var(--primary-navy); box-shadow: 0 2px 6px rgba(0,0,0,0.06); transition: all 0.2s;">
+          <i class="fa-solid fa-lock"></i> Sign In
+        </button>
+        <button id="authTabSignUp" type="button" onclick="switchAuthTab('signup')" style="flex: 1; padding: 10px; border: none; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; background: transparent; color: var(--text-gray); transition: all 0.2s;">
+          <i class="fa-solid fa-user-plus"></i> Create Account
+        </button>
+      </div>
+
+      <!-- PANEL 1: SIGN IN -->
+      <div id="authPanelSignIn">
+        <h2 style="font-size: 20px; margin-bottom: 4px; color: var(--primary-navy);">Management Sign In</h2>
+        <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 20px;">Access S60 Inventory & Rewards System</p>
+        
+        <form id="loginForm" onsubmit="handleLogin(event)" style="text-align: left;">
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">Email or Username</label>
+            <input type="text" id="loginEmail" placeholder="admin@s60sviet.in" value="admin@s60sviet.in" required style="margin-top: 6px;">
+          </div>
+          <div style="margin-bottom: 20px;">
+            <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">Password</label>
+            <input type="password" id="loginPassword" placeholder="••••••••" value="S60Admin@2026" required style="margin-top: 6px;">
+          </div>
+          <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 14px;">
+            Sign In <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <div style="background: var(--surface-gray); border-radius: 10px; padding: 10px 14px; margin-top: 18px; text-align: left;">
+          <span style="font-size: 11px; font-weight: bold; color: var(--primary-navy);">Default SuperAdmin Credentials:</span>
+          <div style="font-size: 11px; color: var(--text-gray); margin-top: 2px;">
+            Email: <code>admin@s60sviet.in</code> | Password: <code>S60Admin@2026</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: SIGN UP -->
+      <div id="authPanelSignUp" style="display: none;">
+        <h2 style="font-size: 20px; margin-bottom: 4px; color: var(--primary-navy);">Create Management Account</h2>
+        <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 18px;">Register as a Super60 faculty coordinator</p>
+
+        <form id="signUpForm" onsubmit="handleSignUp(event)" style="text-align: left;">
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">Full Name *</label>
+            <input type="text" id="signupFullName" placeholder="e.g. Dr. Harpreet Singh" required style="margin-top: 4px;">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">Email *</label>
+              <input type="email" id="signupEmail" placeholder="harpreet@sviet.ac.in" required style="margin-top: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">Username (Optional)</label>
+              <input type="text" id="signupUsername" placeholder="harpreet_s" style="margin-top: 4px;">
+            </div>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">Department Role *</label>
+            <select id="signupRole" style="margin-top: 4px;">
+              <option value="COORDINATOR">S60 Event Coordinator</option>
+              <option value="EVENT_MANAGER">Event Lead / Manager</option>
+              <option value="INVENTORY_MANAGER">Inventory In-Charge</option>
+              <option value="FACULTY">Faculty Member (CSE)</option>
+              <option value="SUPER_ADMIN">Department Head / SuperAdmin</option>
+            </select>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">Password *</label>
+              <input type="password" id="signupPassword" placeholder="Min 6 characters" required style="margin-top: 4px;">
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">Confirm Password *</label>
+              <input type="password" id="signupConfirmPassword" placeholder="Re-enter password" required style="margin-top: 4px;">
+            </div>
+          </div>
+          <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 14px;">
+            <i class="fa-solid fa-user-check"></i> Register & Enter Portal
+          </button>
+        </form>
+
+        <p style="font-size: 11px; color: var(--text-gray); margin-top: 14px;">
+          Already have an account? <a href="javascript:void(0)" onclick="switchAuthTab('signin')" style="color: var(--primary-orange); font-weight: bold; text-decoration: none;">Sign in here</a>
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 3. MAIN APPLICATION APP SHELL -->
+  <div id="appShell" style="display: none; flex-direction: column; min-height: 100vh;">
+    
+    <!-- Top Header Navigation -->
+    <header class="header-nav">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <img src="/assets/s60_symbol.png" alt="S60" style="height: 32px;">
+        <div>
+          <span style="font-weight: 800; color: var(--primary-navy); font-size: 16px;">S60 Inventory</span>
+          <span style="font-size: 12px; color: var(--primary-orange); font-weight: 600; margin-left: 6px;">Portal</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <button class="nav-tab active" onclick="switchTab('dashboard')"><i class="fa-solid fa-grid-2"></i> Dashboard</button>
+        <button class="nav-tab" onclick="switchTab('events')"><i class="fa-solid fa-calendar-check"></i> Saved Events</button>
+        <button class="nav-tab" onclick="switchTab('distribution')"><i class="fa-solid fa-clipboard-check"></i> Rewards & Distribution</button>
+        <button class="nav-tab" onclick="switchTab('inventory')"><i class="fa-solid fa-boxes-stacked"></i> Master Inventory</button>
+        <button class="nav-tab" onclick="switchTab('students')"><i class="fa-solid fa-user-graduate"></i> Students</button>
+        <button class="nav-tab" onclick="switchTab('reports')"><i class="fa-solid fa-chart-pie"></i> Reports</button>
+      </nav>
+
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div id="sessionBadge" class="badge" style="background: var(--surface-gray); color: var(--primary-navy); font-weight: bold; border: 1px solid var(--border-subtle);">
+          <i class="fa-solid fa-circle-check" style="color: var(--primary-orange); margin-right: 5px;"></i> 2026-27 • ODD
+        </div>
+        <div id="userBadge" class="badge" style="background: rgba(15, 43, 91, 0.06); color: var(--primary-navy); font-weight: 600; border: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-user-shield" style="color: var(--primary-orange);"></i>
+          <span id="headerUserName">Admin</span>
+          <span id="headerUserRole" style="font-size: 10px; background: var(--primary-navy); color: white; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">ADMIN</span>
+        </div>
+        <button class="btn-secondary" onclick="handleLogout()" style="padding: 6px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px;" title="Logout">
+          <i class="fa-solid fa-right-from-bracket"></i> Logout
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Dynamic Content Container -->
+    <main style="max-width: 1240px; margin: 0 auto; width: 100%; padding: 24px 20px; flex: 1;">
+
+      <!-- TAB 1: DASHBOARD -->
+      <section id="tab-dashboard" class="tab-content">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 id="dashWelcome" style="font-size: 24px;">Good morning, Admin</h2>
+            <p style="color: var(--text-gray); font-size: 13px;">Manage events, track inventory, and record student rewards in one place.</p>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn-primary" onclick="openAddStudentModal()"><i class="fa-solid fa-user-plus"></i> Enlist Student</button>
+            <button class="btn-secondary" onclick="openCreateEventModal()"><i class="fa-solid fa-plus"></i> New Event</button>
+            <button class="btn-secondary" onclick="switchTab('distribution')"><i class="fa-solid fa-clipboard-check"></i> Distribute</button>
+          </div>
+        </div>
+
+        <!-- 4 Metric Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px;">
+          <div class="card" onclick="switchTab('students')" style="cursor: pointer; transition: transform 0.2s;" title="Click to view & enlist students">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-gray);">Active Students</span>
+              <span class="badge badge-active" style="font-size: 11px; padding: 2px 8px;"><i class="fa-solid fa-plus"></i> Enlist</span>
+            </div>
+            <h2 id="dashStudents" style="font-size: 32px; margin-top: 8px; color: var(--primary-navy);">0</h2>
+            <p style="font-size: 12px; color: var(--text-gray); margin-top: 4px;">Tap here to enlist and manage students</p>
+          </div>
+
+          <div class="card">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-gray);">Saved Events</span>
+              <i class="fa-solid fa-calendar-days" style="color: var(--primary-orange); font-size: 18px;"></i>
+            </div>
+            <h2 id="dashEvents" style="font-size: 32px; margin-top: 8px; color: var(--primary-orange);">4</h2>
+            <p id="dashActiveEvents" style="font-size: 12px; color: var(--text-gray); margin-top: 4px;">2 active/ongoing events</p>
+          </div>
+
+          <div class="card">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-gray);">Total Items Distributed</span>
+              <i class="fa-solid fa-circle-check" style="color: var(--status-green); font-size: 18px;"></i>
+            </div>
+            <h2 id="dashDistributed" style="font-size: 32px; margin-top: 8px; color: var(--status-green);">710</h2>
+            <p id="dashPending" style="font-size: 12px; color: var(--text-gray); margin-top: 4px;">140 pending units</p>
+          </div>
+
+          <div class="card">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-gray);">Total Inventory Units</span>
+              <i class="fa-solid fa-boxes-stacked" style="color: var(--status-blue); font-size: 18px;"></i>
+            </div>
+            <h2 id="dashInventory" style="font-size: 32px; margin-top: 8px; color: var(--status-blue);">850+</h2>
+            <p style="font-size: 12px; color: var(--text-gray); margin-top: 4px;">Allocated across events</p>
+          </div>
+        </div>
+
+        <!-- Low Stock Alerts -->
+        <div id="lowStockSection" style="margin-bottom: 24px; display: none;">
+          <h3 style="font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: var(--status-orange);"></i> Low Stock Alerts
+          </h3>
+          <div id="lowStockList" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;"></div>
+        </div>
+
+        <!-- Recent Saved Events -->
+        <div class="card" style="margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 17px;">Recent Saved Events</h3>
+            <button class="btn-secondary" onclick="switchTab('events')" style="padding: 6px 12px; font-size: 12px;">View All Events <i class="fa-solid fa-arrow-right"></i></button>
+          </div>
+          <div id="dashRecentEvents" style="display: flex; flex-direction: column; gap: 14px;"></div>
+        </div>
+      </section>
+
+      <!-- TAB 2: SAVED EVENTS (CRITICAL HISTORICAL VIEW) -->
+      <section id="tab-events" class="tab-content" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 24px;">Saved Events History</h2>
+            <p style="color: var(--text-gray); font-size: 13px;">Complete historical repository of Super60 events and distributed rewards.</p>
+          </div>
+          <button class="btn-primary" onclick="openCreateEventModal()"><i class="fa-solid fa-plus"></i> Create Event</button>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="card" style="margin-bottom: 20px; padding: 16px;">
+          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px;">
+            <input type="text" id="eventSearchInput" placeholder="Search event by name, UID, or venue..." oninput="loadSavedEvents()">
+            <select id="eventStatusFilter" onchange="loadSavedEvents()">
+              <option value="ALL">All Status</option>
+              <option value="Active">Active / Ongoing</option>
+              <option value="Upcoming">Upcoming</option>
+              <option value="Completed">Completed</option>
+              <option value="Archived">Archived</option>
+            </select>
+            <select id="eventSchemeFilter" onchange="loadSavedEvents()">
+              <option value="ALL">All Schemes</option>
+              <option value="ODD">ODD Scheme (3, 5, 7)</option>
+              <option value="EVEN">EVEN Scheme (4, 6, 8)</option>
+            </select>
+            <select id="eventSemesterFilter" onchange="loadSavedEvents()">
+              <option value="">All Semesters</option>
+              <option value="3">3rd Semester</option>
+              <option value="4">4th Semester</option>
+              <option value="5">5th Semester</option>
+              <option value="6">6th Semester</option>
+              <option value="7">7th Semester</option>
+              <option value="8">8th Semester</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Events Cards Grid -->
+        <div id="savedEventsContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px;"></div>
+      </section>
+
+      <!-- TAB 3: REWARDS & DISTRIBUTION -->
+      <section id="tab-distribution" class="tab-content" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 24px;">Rewards Distribution Portal</h2>
+            <p style="color: var(--text-gray); font-size: 13px;">Record, track and review which student received which item for each event.</p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <select id="distEventSelect" onchange="loadDistributionMatrix()" style="min-width: 280px;"></select>
+          </div>
+        </div>
+
+        <!-- Distribution Filter & Search -->
+        <div class="card" style="margin-bottom: 20px; padding: 14px;">
+          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
+            <input type="text" id="distStudentSearch" placeholder="Search student name, S60 ID, or roll number..." oninput="loadDistributionMatrix()">
+            <select id="distSemesterFilter" onchange="loadDistributionMatrix()">
+              <option value="">All Semesters</option>
+              <option value="3">3rd Semester</option>
+              <option value="4">4th Semester</option>
+              <option value="5">5th Semester</option>
+              <option value="6">6th Semester</option>
+              <option value="7">7th Semester</option>
+              <option value="8">8th Semester</option>
+            </select>
+            <select id="distStatusFilter" onchange="loadDistributionMatrix()">
+              <option value="ALL">All Status</option>
+              <option value="COMPLETED">Completed (All received)</option>
+              <option value="PARTIAL">Partially Received</option>
+              <option value="PENDING">Pending (None received)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Summary Bar -->
+        <div id="distSummaryBar" class="card" style="margin-bottom: 16px; padding: 12px 20px; background: rgba(255, 215, 179, 0.3); border-color: var(--secondary-orange); display: flex; justify-content: space-between; align-items: center;">
+          <span id="distSummaryText" style="font-weight: 700; color: var(--primary-navy); font-size: 14px;">Loading event matrix...</span>
+          <span id="distCompletionRate" class="badge badge-active" style="font-size: 13px;">0% Complete</span>
+        </div>
+
+        <!-- Distribution Cards Grid -->
+        <div id="distRowsContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
+      </section>
+
+      <!-- TAB 4: MASTER INVENTORY -->
+      <section id="tab-inventory" class="tab-content" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div>
+            <h2 style="font-size: 24px;">Master Inventory Catalog</h2>
+            <p style="color: var(--text-gray); font-size: 13px;">All reusable inventory types: apparel, stationery, certificates, trophies, medals.</p>
+          </div>
+          <button class="btn-primary" onclick="openAddMasterItemModal()"><i class="fa-solid fa-plus"></i> Add Item Catalog</button>
+        </div>
+
+        <div id="masterInventoryContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;"></div>
+      </section>
+
+      <!-- TAB 5: STUDENTS & PROMOTION -->
+      <section id="tab-students" class="tab-content" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 24px;">Super60 Student Database</h2>
+            <p style="color: var(--text-gray); font-size: 13px;">Single source of student records. Historical reward records stay preserved across semester promotions.</p>
+          </div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn-primary" onclick="openAddStudentModal()"><i class="fa-solid fa-user-plus"></i> Enlist Student</button>
+            <button class="btn-secondary" onclick="openBulkImportModal()"><i class="fa-solid fa-upload"></i> Bulk Import</button>
+            <button class="btn-secondary" onclick="openPromoteDialog()"><i class="fa-solid fa-trending-up" style="color: var(--primary-orange);"></i> Promote Students</button>
+          </div>
+        </div>
+
+        <!-- Students Filter -->
+        <div class="card" style="margin-bottom: 20px; padding: 14px;">
+          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
+            <input type="text" id="studentSearchInput" placeholder="Search by name, S60 ID, or roll number..." oninput="loadStudentsList()">
+            <select id="studentSemesterFilter" onchange="loadStudentsList()">
+              <option value="">All Semesters</option>
+              <option value="3">3rd Semester</option>
+              <option value="4">4th Semester</option>
+              <option value="5">5th Semester</option>
+              <option value="6">6th Semester</option>
+              <option value="7">7th Semester</option>
+              <option value="8">8th Semester</option>
+            </select>
+            <select id="studentStatusFilter" onchange="loadStudentsList()">
+              <option value="ACTIVE">Active Students</option>
+              <option value="INACTIVE">Deactivated Students</option>
+              <option value="ALL">All Records</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card" style="padding: 0; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+            <thead style="background: var(--surface-gray); color: var(--primary-navy); font-weight: 700;">
+              <tr>
+                <th style="padding: 14px 18px;">Student ID</th>
+                <th style="padding: 14px 18px;">Roll Number</th>
+                <th style="padding: 14px 18px;">Name</th>
+                <th style="padding: 14px 18px;">Semester</th>
+                <th style="padding: 14px 18px;">Batch</th>
+                <th style="padding: 14px 18px;">Status</th>
+                <th style="padding: 14px 18px; text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="studentsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 6: REPORTS -->
+      <section id="tab-reports" class="tab-content" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div>
+            <h2 style="font-size: 24px;">Management Reports & Export</h2>
+            <p style="color: var(--text-gray); font-size: 13px;">Real-time database reporting and CSV/Excel downloads.</p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn-primary" onclick="downloadCsvReport('distribution')"><i class="fa-solid fa-file-excel"></i> Export Distribution CSV</button>
+            <button class="btn-secondary" onclick="downloadCsvReport('events')"><i class="fa-solid fa-file-csv"></i> Export Events CSV</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;">
+          <h3 style="font-size: 16px; margin-bottom: 14px;">Event Inventory Distribution Analytics</h3>
+          <div id="reportsContainer" style="overflow-x: auto;"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- MOBILE BOTTOM NAVIGATION BAR -->
+    <nav class="mobile-bottom-nav">
+      <button class="mobile-nav-item active" onclick="switchTab('dashboard')" id="mNav-dashboard">
+        <i class="fa-solid fa-house"></i>
+        <span>Dashboard</span>
+      </button>
+      <button class="mobile-nav-item" onclick="switchTab('students')" id="mNav-students">
+        <i class="fa-solid fa-user-graduate"></i>
+        <span>Students</span>
+      </button>
+      <button class="mobile-nav-item" onclick="switchTab('events')" id="mNav-events">
+        <i class="fa-solid fa-calendar-check"></i>
+        <span>Events</span>
+      </button>
+      <button class="mobile-nav-item" onclick="switchTab('distribution')" id="mNav-distribution">
+        <i class="fa-solid fa-clipboard-check"></i>
+        <span>Rewards</span>
+      </button>
+      <button class="mobile-nav-item" onclick="switchTab('inventory')" id="mNav-inventory">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <span>Inventory</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- CREATE EVENT MODAL -->
+  <div id="createEventModal" class="modal-overlay">
+    <div class="modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 18px;">Create New Super60 Event</h3>
+        <button onclick="closeModal('createEventModal')" style="border: none; background: transparent; font-size: 18px; cursor: pointer;">&times;</button>
+      </div>
+
+      <form id="createEventForm" onsubmit="handleCreateEvent(event)">
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: bold;">Event Name *</label>
+          <input type="text" id="evName" placeholder="e.g. Industry Cloud Architecture Workshop" required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12px; font-weight: bold;">Event Type *</label>
+            <select id="evType">
+              <option value="Workshop">Workshop</option>
+              <option value="Seminar">Seminar</option>
+              <option value="Competition">Competition</option>
+              <option value="Hackathon">Hackathon</option>
+              <option value="Training">Training</option>
+              <option value="Industry Visit">Industry Visit</option>
+              <option value="Orientation">Orientation</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: bold;">Date *</label>
+            <input type="text" id="evDate" value="15 Oct 2026" required>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12px; font-weight: bold;">Time</label>
+            <input type="text" id="evTime" value="10:00 AM">
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: bold;">Venue</label>
+            <input type="text" id="evVenue" value="SVIET Campus Lab">
+          </div>
+        </div>
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Semester Scheme *</label>
+          <select id="evScheme" onchange="updateEventModalSemesters()" style="margin-top: 4px;">
+            <option value="ODD">ODD Scheme</option>
+            <option value="EVEN">EVEN Scheme</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Select Applicable Semesters *</label>
+          <p style="font-size: 11px; color: var(--text-gray); margin-bottom: 8px;">Choose which specific semester students are eligible for this event:</p>
+          <div id="evSemestersCheckboxes" style="display: flex; gap: 16px; flex-wrap: wrap; background: var(--surface-gray); padding: 12px 16px; border-radius: 12px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--primary-navy);">
+              <input type="checkbox" name="evSem" value="3" checked> 3rd Semester
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--primary-navy);">
+              <input type="checkbox" name="evSem" value="5" checked> 5th Semester
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--primary-navy);">
+              <input type="checkbox" name="evSem" value="7" checked> 7th Semester
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 12px; font-weight: bold;">Description</label>
+          <textarea id="evDesc" rows="3" placeholder="Brief event description..."></textarea>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">Save Event Permanently</button>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- EVENT DETAILS MODAL -->
+  <div id="eventDetailModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 720px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div>
+          <span id="evtDetUid" class="badge badge-active" style="margin-bottom: 4px;">S60-EVT-0001</span>
+          <h2 id="evtDetName" style="font-size: 20px;">Event Details</h2>
+        </div>
+        <button onclick="closeModal('eventDetailModal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer;">&times;</button>
+      </div>
+
+      <div style="background: var(--surface-gray); padding: 14px; border-radius: 12px; margin-bottom: 18px;">
+        <p id="evtDetDesc" style="font-size: 13px; color: var(--text-gray); margin-bottom: 8px;"></p>
+        <div style="display: flex; gap: 16px; font-size: 12px; font-weight: 600; color: var(--primary-navy); flex-wrap: wrap;">
+          <span><i class="fa-solid fa-calendar" style="color: var(--primary-orange);"></i> <span id="evtDetDate"></span></span>
+          <span><i class="fa-solid fa-location-dot" style="color: var(--primary-orange);"></i> <span id="evtDetVenue"></span></span>
+          <span><i class="fa-solid fa-layer-group" style="color: var(--primary-orange);"></i> <span id="evtDetSemesters"></span></span>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="font-size: 16px;">Event Inventory & Rewards</h3>
+        <button class="btn-secondary" onclick="openAddEventItemModal()" style="padding: 6px 12px; font-size: 12px;"><i class="fa-solid fa-plus"></i> Allocate Item</button>
+      </div>
+
+      <div id="evtDetInventoryTable" style="margin-bottom: 20px;"></div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
+        <button class="btn-secondary" onclick="archiveCurrentEvent()"><i class="fa-solid fa-box-archive"></i> Archive Event</button>
+        <button class="btn-primary" onclick="goToEventDistribution()"><i class="fa-solid fa-clipboard-check"></i> Open Distribution Portal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD EVENT ITEM MODAL -->
+  <div id="addEventItemModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 440px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 16px;">Allocate Inventory to Event</h3>
+        <button onclick="closeModal('addEventItemModal')" style="border: none; background: transparent; font-size: 18px; cursor: pointer;">&times;</button>
+      </div>
+      <form onsubmit="handleAllocateEventInventory(event)">
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: bold;">Catalog Item *</label>
+          <select id="allocItemSelect" required></select>
+        </div>
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: bold;">Initial Quantity *</label>
+          <input type="number" id="allocQty" value="60" min="1" required>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 12px; font-weight: bold;">Eligibility Rule *</label>
+          <select id="allocEligibility">
+            <option value="ALL">All Eligible Students</option>
+            <option value="WINNERS">Winners Only</option>
+            <option value="SELECTED">Selected Students</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">Add To Event</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- STUDENT PROFILE MODAL / FULL RECORD VIEW -->
+  <div id="studentProfileModal" class="modal-overlay">
+    <div class="modal-box student-profile-box" style="max-width: 640px; padding: 24px;">
+      <!-- Modal Navigation Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button onclick="closeModal('studentProfileModal')" class="btn-secondary" style="padding: 6px 12px; font-size: 12px; border-radius: 8px;">
+            <i class="fa-solid fa-arrow-left"></i> Back to Students
+          </button>
+          <h3 style="font-size: 16px; margin: 0; color: var(--primary-navy);">Student Complete Record</h3>
+        </div>
+        <button onclick="closeModal('studentProfileModal')" style="border: none; background: transparent; font-size: 24px; cursor: pointer; color: var(--text-gray);">&times;</button>
+      </div>
+
+      <!-- Student Bio Card -->
+      <div style="background: var(--surface-gray); border-radius: 16px; padding: 18px; margin-bottom: 18px;">
+        <div style="display: flex; gap: 14px; align-items: center;">
+          <div id="profAvatar" style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, var(--primary-navy), var(--primary-orange)); color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; flex-shrink: 0;">
+            S
+          </div>
+          <div style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap;">
+              <h2 id="profName" style="font-size: 20px; margin: 0; color: var(--primary-navy);">Student Name</h2>
+              <span id="profStatusBadge" class="badge badge-active">ACTIVE</span>
+            </div>
+            <div id="profBadges" style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+              <span id="profSidBadge" class="badge" style="background: rgba(244,123,32,0.12); color: var(--primary-orange); font-weight: bold;">S60-181</span>
+              <span id="profRollBadge" class="badge" style="background: white; border: 1px solid var(--border-subtle); color: var(--primary-navy);">Roll: 24CSE181</span>
+              <span id="profSemBadge" class="badge badge-pending">3rd Semester</span>
+            </div>
+          </div>
+        </div>
+        <div id="profSubtitle" style="font-size: 12px; color: var(--text-gray); margin-top: 12px; border-top: 1px solid var(--border-subtle); padding-top: 8px;"></div>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px;">
+        <div style="background: white; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 10px; text-align: center;">
+          <div style="font-size: 11px; color: var(--text-gray); font-weight: 600;">Rewards Won</div>
+          <div id="profRewardsCount" style="font-size: 20px; font-weight: bold; color: var(--primary-orange); margin-top: 2px;">0</div>
+        </div>
+        <div style="background: white; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 10px; text-align: center;">
+          <div style="font-size: 11px; color: var(--text-gray); font-weight: 600;">Competitions</div>
+          <div id="profWinsCount" style="font-size: 20px; font-weight: bold; color: var(--primary-navy); margin-top: 2px;">0</div>
+        </div>
+        <div style="background: white; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 10px; text-align: center;">
+          <div style="font-size: 11px; color: var(--text-gray); font-weight: 600;">Events</div>
+          <div id="profEventsCount" style="font-size: 20px; font-weight: bold; color: var(--status-green); margin-top: 2px;">0</div>
+        </div>
+      </div>
+      
+      <!-- Competition Wins -->
+      <div id="profWinsContainer" style="margin-bottom: 18px; display: none;">
+        <h4 style="font-size: 14px; margin-bottom: 8px; color: var(--primary-orange); display: flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-trophy"></i> Competition Wins
+        </h4>
+        <div id="profWinsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>
+
+      <!-- Historical Rewards Timeline -->
+      <div style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h4 style="font-size: 14px; margin: 0; color: var(--primary-navy); display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-clock-rotate-left"></i> Historical Rewards Timeline
+          </h4>
+          <span style="font-size: 11px; color: var(--text-gray); background: var(--surface-gray); padding: 2px 8px; border-radius: 6px;">Never Erased</span>
+        </div>
+        <div id="profRewardsList" style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>
+
+      <!-- Bottom Actions -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 16px; flex-wrap: wrap; gap: 10px;">
+        <span style="font-size: 12px; color: var(--text-gray);">Audit record is permanent</span>
+        <button id="profDeactivateBtn" class="btn-danger" onclick="toggleStudentStatus()"><i class="fa-solid fa-user-slash"></i> Deactivate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BULK IMPORT MODAL -->
+  <div id="bulkImportModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 600px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 18px;">Bulk Import Students</h3>
+        <button onclick="closeModal('bulkImportModal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer;">&times;</button>
+      </div>
+      <p style="font-size: 12px; color: var(--text-gray); margin-bottom: 10px;">Paste CSV format: <code>Student ID,Name,Roll Number,Email,Phone,Batch,Semester</code></p>
+      <textarea id="bulkCsvInput" rows="8" style="font-family: monospace; font-size: 12px; margin-bottom: 16px;"></textarea>
+      <button class="btn-primary" onclick="executeBulkImport()" style="width: 100%; justify-content: center;">Validate & Import</button>
+    </div>
+  </div>
+
+  <!-- PROMOTION CONFIRMATION MODAL -->
+  <div id="promoteModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 480px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 18px; color: var(--primary-orange);"><i class="fa-solid fa-graduation-cap"></i> Promote Students</h3>
+        <button onclick="closeModal('promoteModal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer;">&times;</button>
+      </div>
+      <div id="promotePreviewContent" style="margin-bottom: 20px; font-size: 13px; line-height: 1.5;"></div>
+      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button class="btn-secondary" onclick="closeModal('promoteModal')">Cancel</button>
+        <button class="btn-primary" onclick="executePromotion()">Confirm Promotion</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD MASTER INVENTORY ITEM MODAL -->
+  <div id="addMasterItemModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 480px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 18px; color: var(--primary-navy);"><i class="fa-solid fa-box-open" style="color: var(--primary-orange);"></i> Add Master Item Catalog</h3>
+        <button onclick="closeModal('addMasterItemModal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer;">&times;</button>
+      </div>
+      <form onsubmit="handleCreateMasterItem(event)">
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Item Name *</label>
+          <input type="text" id="masterItemName" placeholder="e.g. Cotton T-Shirt, Metallic Trophy, Certificate" required style="margin-top: 4px;">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Category *</label>
+            <select id="masterItemCategory" style="margin-top: 4px;">
+              <option value="Apparel">Apparel</option>
+              <option value="Stationery">Stationery</option>
+              <option value="Certificate">Certificate</option>
+              <option value="Award">Award</option>
+              <option value="Gift">Gift</option>
+              <option value="Kit">Kit</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Unit *</label>
+            <input type="text" id="masterItemUnit" value="units" placeholder="e.g. units, pieces, kits" required style="margin-top: 4px;">
+          </div>
+        </div>
+        <div style="margin-bottom: 18px;">
+          <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Description (Optional)</label>
+          <textarea id="masterItemDesc" rows="3" placeholder="Item specifications or details..." style="margin-top: 4px;"></textarea>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" class="btn-secondary" onclick="closeModal('addMasterItemModal')">Cancel</button>
+          <button type="submit" class="btn-primary">Add Item to Catalog</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- INSERT / ADD STUDENT MODAL -->
+  <div id="addStudentModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 520px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 18px; color: var(--primary-navy);"><i class="fa-solid fa-user-plus" style="color: var(--primary-orange);"></i> Insert New Student</h3>
+        <button onclick="closeModal('addStudentModal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer;">&times;</button>
+      </div>
+      <form onsubmit="handleCreateStudent(event)">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Student ID *</label>
+            <input type="text" id="newStudentId" placeholder="e.g. S60-001" required style="margin-top: 4px;">
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Roll Number *</label>
+            <input type="text" id="newStudentRoll" placeholder="e.g. 24CSE001" required style="margin-top: 4px;">
+          </div>
+        </div>
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Student Full Name *</label>
+          <input type="text" id="newStudentName" placeholder="e.g. Rahul Sharma" required style="margin-top: 4px;">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Semester *</label>
+            <select id="newStudentSemester" required style="margin-top: 4px;">
+              <optgroup label="ODD Scheme Semesters">
+                <option value="3" selected>3rd Semester (Odd)</option>
+                <option value="5">5th Semester (Odd)</option>
+                <option value="7">7th Semester (Odd)</option>
+              </optgroup>
+              <optgroup label="EVEN Scheme Semesters">
+                <option value="4">4th Semester (Even)</option>
+                <option value="6">6th Semester (Even)</option>
+                <option value="8">8th Semester (Even)</option>
+              </optgroup>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Batch *</label>
+            <input type="text" id="newStudentBatch" value="2025" placeholder="e.g. 2025" required style="margin-top: 4px;">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
+          <div>
+            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Email (Optional)</label>
+            <input type="email" id="newStudentEmail" placeholder="student@sviet.ac.in" style="margin-top: 4px;">
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Phone (Optional)</label>
+            <input type="text" id="newStudentPhone" placeholder="9876543210" style="margin-top: 4px;">
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" class="btn-secondary" onclick="closeModal('addStudentModal')">Cancel</button>
+          <button type="submit" class="btn-primary">Insert Student Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast-msg"></div>
+
+  <script src="/portal/app.js"></script>
+
+</body>
+</html>
