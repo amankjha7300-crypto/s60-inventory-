@@ -25,10 +25,15 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Configure Android Project & Dependencies
+      - name: Generate Gradle Wrapper
+        run: |
+          cd mobile/android
+          gradle wrapper --gradle-version 8.3
+          chmod +x gradlew
+
+      - name: Install Dependencies
         run: |
           cd mobile
-          flutter create --platforms=android --org in.ac.sviet.super60 .
           flutter pub get
 
       - name: Build Release APK
