@@ -16,8 +16,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isSignUp = false;
 
   // Sign In Controllers
-  final _emailController = TextEditingController(text: 'admin@s60sviet.in');
-  final _passwordController = TextEditingController(text: 'S60Admin@2026');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
   // Sign Up Controllers
