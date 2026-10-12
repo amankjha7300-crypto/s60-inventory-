@@ -187,7 +187,15 @@
         <button class="nav-tab" onclick="switchTab('reports')"><i class="fa-solid fa-chart-pie"></i> Reports</button>
       </nav>
 
-      <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div id="liveSyncStatus" style="display: flex; align-items: center; gap: 5px;">
+          <span style="font-size: 11px; color: #10B981; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; background: rgba(16, 185, 129, 0.08); padding: 4px 9px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.25);" title="Connected to 24/7 cloud server with real-time multi-user synchronization">
+            <span style="width: 7px; height: 7px; background: #10B981; border-radius: 50%; box-shadow: 0 0 6px #10B981;"></span> Cloud Live
+          </span>
+          <button type="button" onclick="autoSyncActiveView(true)" class="btn-sm" style="padding: 5px 8px; font-size: 11px; background: var(--surface-gray); border: 1px solid var(--border-subtle); border-radius: 6px; cursor: pointer; color: var(--primary-navy);" title="Synchronize latest cloud data now">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+        </div>
         <div id="sessionBadge" class="badge" style="background: var(--surface-gray); color: var(--primary-navy); font-weight: bold; border: 1px solid var(--border-subtle);">
           <i class="fa-solid fa-circle-check" style="color: var(--primary-orange); margin-right: 5px;"></i> 2026-27 • ODD
         </div>

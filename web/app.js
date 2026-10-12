@@ -272,7 +272,10 @@ function escapeJs(str) {
     .replace(/\r/g, '');
 }
 
+let currentActiveTab = 'dashboard';
+
 function switchTab(tabName) {
+  currentActiveTab = tabName;
   document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
   document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
@@ -302,6 +305,51 @@ function switchTab(tabName) {
   if (tabName === 'students') loadStudentsList();
   if (tabName === 'reports') loadReportsData();
 }
+
+// ---------------- LIVE MULTI-USER CLOUD SYNC ----------------
+let isAutoSyncing = false;
+
+async function autoSyncActiveView(isManual = false) {
+  if (isAutoSyncing || !authToken) return;
+
+  // If user is actively typing in an input or textarea, skip this cycle to avoid interrupting them
+  const activeEl = document.activeElement;
+  if (!isManual && activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+    return;
+  }
+
+  isAutoSyncing = true;
+  try {
+    if (currentActiveTab === 'dashboard') {
+      await loadDashboard();
+    } else if (currentActiveTab === 'events') {
+      await loadSavedEvents();
+    } else if (currentActiveTab === 'distribution') {
+      if (activeEventId) await loadDistributionMatrix();
+    } else if (currentActiveTab === 'inventory') {
+      await loadMasterInventory();
+    } else if (currentActiveTab === 'students') {
+      await loadStudentsList();
+    }
+    if (isManual) {
+      showToast('✓ Cloud data synchronized');
+    }
+  } catch (err) {
+    console.debug('[Cloud Sync] Background poll notice:', err);
+  } finally {
+    isAutoSyncing = false;
+  }
+}
+
+// Background auto-sync every 6 seconds so changes made on other laptops appear automatically
+setInterval(() => {
+  autoSyncActiveView(false);
+}, 6000);
+
+// Auto-sync immediately whenever the user switches focus to this window / application
+window.addEventListener('focus', () => {
+  autoSyncActiveView(false);
+});
 
 // ---------------- DASHBOARD ----------------
 async function loadDashboard() {
