@@ -25,7 +25,6 @@ class AppConstants {
   static const String institutionName = "Swami Vivekanand Group of Institutes (SVIET)";
   static const String departmentName = "Super60 / Department of Computer Science & Engineering";
 
-  // Centralized API Base URL configuration
-  // For physical Android device over Wi-Fi (Current Host IP):
-  static const String defaultApiBaseUrl = "http://192.168.31.19:8000/api/v1";
+  // Centralized API Base URL configuration - Connected to Live 24/7 Cloud Server
+  static const String defaultApiBaseUrl = "https://s60-inventory.onrender.com/api/v1";
 }
