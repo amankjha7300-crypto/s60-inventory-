@@ -17,18 +17,18 @@ The **S60 Inventory & Rewards Management System** is a dedicated internal manage
 ## 2. Technology Stack & Architecture
 
 ```
-                  SUPER60 MANAGEMENT
-                          │
-          ┌───────────────┴───────────────┐
-          ▼                               ▼
-  Flutter Android App             Web Management Portal
-  (mobile/lib/...)                (http://localhost:8000/portal/)
-          │                               │
-          └───────────────┬───────────────┘
-                          │ HTTPS / REST API (/api/v1)
-                          ▼
-                   FastAPI Backend
-                   (backend/app/...)
+                         SUPER60 MANAGEMENT
+                                 │
+           ┌────────────────────┼────────────────────┐
+           ▼                    ▼                    ▼
+   Windows Desktop App     Web Portal        Android Mobile App
+  (S60_Inventory.exe)    (Browser/Local)    (S60_Inventory.apk)
+           │                    │                    │
+           └────────────────────┼────────────────────┘
+                                │ HTTPS / REST API (/api/v1)
+                                ▼
+                         FastAPI Backend
+                         (backend/app/...)
                           │
                           ▼
                PostgreSQL / SQLite Database
@@ -149,7 +149,25 @@ c:/Users/Aman Kumar/OneDrive/Desktop/s60inventory/
 
 ---
 
-## 6. How to Run Locally
+## 6. Windows PC Standalone App (.exe)
+
+A single-file, standalone Windows desktop application is included in this repository:
+- **Direct Executable**: [`S60_Inventory.exe`](file:///c:/Users/Aman%20Kumar/OneDrive/Desktop/s60inventory/S60_Inventory.exe) (located in root directory & `dist/`)
+- **How to Run**: Simply double-click `S60_Inventory.exe`. No terminal, Python, or uvicorn commands required!
+- **Features**:
+  - Automatically boots the FastAPI backend & SQLite database silently in the background.
+  - Opens a dedicated, frameless native Windows desktop application window (Microsoft Edge WebView2).
+  - Automatically retains your persistent database (`s60inventory.db`) alongside the `.exe`.
+  - Cleanly shuts down the backend upon closing the desktop window.
+- **To Rebuild the PC App**:
+  Double-click [`build_exe.bat`](file:///c:/Users/Aman%20Kumar/OneDrive/Desktop/s60inventory/build_exe.bat) or run:
+  ```powershell
+  python -m PyInstaller --clean --noconfirm desktop_app.spec
+  ```
+
+---
+
+## 7. How to Run via Web Browser (Development Mode)
 
 ### 1. Backend Server
 ```powershell
@@ -170,7 +188,7 @@ Navigate in your browser to:
 
 ---
 
-## 7. Android APK Build Instructions
+## 8. Android APK Build Instructions
 
 To build the release APK for Android using Flutter:
 
@@ -182,5 +200,6 @@ To build the release APK for Android using Flutter:
    flutter pub get
    flutter build apk --release
    ```
-3. The resulting installable APK will be generated at:
-   `mobile/build/app/outputs/flutter-apk/app-release.apk`
+3. The resulting installable APK is located at:
+   - Root: [`S60_Inventory_Release.apk`](file:///c:/Users/Aman%20Kumar/OneDrive/Desktop/s60inventory/S60_Inventory_Release.apk)
+   - Flutter build output: `mobile/build/app/outputs/flutter-apk/app-release.apk`

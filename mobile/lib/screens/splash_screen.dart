@@ -1,9 +1,58 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
+import '../services/api_service.dart';
 import 'login_screen.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
+
+  void _showApiSettingsDialog(BuildContext context) {
+    final apiService = ApiService();
+    final urlController = TextEditingController(text: apiService.baseUrl);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Server Configuration', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Set the backend server IP address (e.g. computer Wi-Fi IP):',
+              style: TextStyle(fontSize: 13, color: AppColors.textGray),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: urlController,
+              decoration: const InputDecoration(
+                hintText: 'http://192.168.1.X:8000/api/v1',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryOrange),
+            onPressed: () async {
+              await apiService.setBaseUrl(urlController.text);
+              if (context.mounted) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: AppColors.statusDistributed,
+                    content: Text('Server URL updated to: ${urlController.text}'),
+                  ),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,21 +65,31 @@ class SplashScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 12),
-                // Top official logos header
+                // Top header bar with server config gear
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Image.asset('assets/sviet_logo.png', height: 48, fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => const Text('SVIET', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryNavy)),
+                    const SizedBox(width: 40), // Balance gear icon
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset('assets/sviet_logo.png', height: 42, fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => const Text('SVIET', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryNavy)),
+                        ),
+                        Container(height: 28, width: 1, color: AppColors.textGray.withOpacity(0.3), margin: const EdgeInsets.symmetric(horizontal: 14)),
+                        Image.asset('assets/s60_logo.png', height: 42, fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => const Text('SUPER60', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryOrange)),
+                        ),
+                      ],
                     ),
-                    Container(height: 32, width: 1, color: AppColors.textGray.withOpacity(0.3), margin: const EdgeInsets.symmetric(horizontal: 16)),
-                    Image.asset('assets/s60_logo.png', height: 48, fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => const Text('SUPER60', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryOrange)),
+                    IconButton(
+                      tooltip: 'Server Settings',
+                      icon: const Icon(Icons.settings_outlined, color: AppColors.primaryNavy, size: 22),
+                      onPressed: () => _showApiSettingsDialog(context),
                     ),
                   ],
                 ),
-                const SizedBox(height: 36),
+                const SizedBox(height: 28),
 
                 // Headline matching the design mockup exactly
                 Align(

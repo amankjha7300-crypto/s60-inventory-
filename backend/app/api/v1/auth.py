@@ -34,9 +34,16 @@ def signup(data: SignUpRequest, db: Session = Depends(get_db)):
     if db.query(Admin).filter(Admin.username.ilike(username)).first():
         username = f"{username}_{random.randint(100, 999)}"
     
-    # Role validation
-    valid_roles = ["SUPER_ADMIN", "EVENT_MANAGER", "INVENTORY_MANAGER", "COORDINATOR", "FACULTY"]
-    role = data.role.upper() if data.role.upper() in valid_roles else "COORDINATOR"
+    # Role validation - 3 Core Designations: Inventory Coordinator, Head of Department, Super Admin
+    role_input = (data.role or "COORDINATOR").strip().upper()
+    if role_input in ["INVENTORY_COORDINATOR", "COORDINATOR"]:
+        role = "COORDINATOR"
+    elif role_input in ["HOD", "HEAD_OF_DEPARTMENT"]:
+        role = "HOD"
+    elif role_input == "SUPER_ADMIN":
+        role = "SUPER_ADMIN"
+    else:
+        role = "COORDINATOR"
     
     new_admin = Admin(
         username=username,

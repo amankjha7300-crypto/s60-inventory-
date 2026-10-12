@@ -1,6 +1,7 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from typing import Optional
 from app.database.session import get_db
 from app.core.security import decode_access_token
 from app.models.all_models import Admin
@@ -8,9 +9,11 @@ from app.models.all_models import Admin
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 def get_current_admin(
-    token: str = Depends(oauth2_scheme),
+    token_header: Optional[str] = Depends(oauth2_scheme),
+    token_query: Optional[str] = Query(None, alias="token"),
     db: Session = Depends(get_db)
 ) -> Admin:
+    token = token_header or token_query
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

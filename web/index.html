@@ -14,8 +14,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/portal/style.css">
+  <link rel="stylesheet" href="/portal/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/portal/style.css?v=5">
 </head>
 <body>
 
@@ -138,11 +139,9 @@
           <div style="margin-bottom: 12px;">
             <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">Department Role *</label>
             <select id="signupRole" style="margin-top: 4px;">
-              <option value="COORDINATOR">S60 Event Coordinator</option>
-              <option value="EVENT_MANAGER">Event Lead / Manager</option>
-              <option value="INVENTORY_MANAGER">Inventory In-Charge</option>
-              <option value="FACULTY">Faculty Member (CSE)</option>
-              <option value="SUPER_ADMIN">Department Head / SuperAdmin</option>
+              <option value="COORDINATOR">1. Inventory Coordinator</option>
+              <option value="HOD">2. Head of Department (HOD)</option>
+              <option value="SUPER_ADMIN">3. Super Admin</option>
             </select>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
@@ -185,7 +184,12 @@
         <button class="nav-tab active" onclick="switchTab('dashboard')"><i class="fa-solid fa-grid-2"></i> Dashboard</button>
         <button class="nav-tab" onclick="switchTab('events')"><i class="fa-solid fa-calendar-check"></i> Saved Events</button>
         <button class="nav-tab" onclick="switchTab('distribution')"><i class="fa-solid fa-clipboard-check"></i> Rewards & Distribution</button>
-        <button class="nav-tab" onclick="switchTab('inventory')"><i class="fa-solid fa-boxes-stacked"></i> Master Inventory</button>
+        <button class="nav-tab nav-tab-master" onclick="switchTab('inventory')" id="navTab-inventory" title="Master Inventory Catalog">
+          <span class="master-circle-ring">
+            <span class="master-circle-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+          </span>
+          <span class="master-tab-text">Master Inventory</span>
+        </button>
         <button class="nav-tab" onclick="switchTab('students')"><i class="fa-solid fa-user-graduate"></i> Students</button>
         <button class="nav-tab" onclick="switchTab('reports')"><i class="fa-solid fa-chart-pie"></i> Reports</button>
       </nav>
@@ -251,13 +255,20 @@
             <p id="dashPending" style="font-size: 12px; color: var(--text-gray); margin-top: 4px;">140 pending units</p>
           </div>
 
-          <div class="card">
-            <div style="display: flex; justify-content: space-between;">
+          <div class="card" onclick="switchTab('inventory')" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; border-color: rgba(244, 123, 32, 0.3); background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 248, 232, 0.5) 100%);" title="Click to open Master Inventory">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: 13px; font-weight: 600; color: var(--text-gray);">Total Inventory Units</span>
-              <i class="fa-solid fa-boxes-stacked" style="color: var(--status-blue); font-size: 18px;"></i>
+              <span class="badge" style="background: rgba(244, 123, 32, 0.12); color: var(--primary-orange); font-size: 10px; font-weight: 700; border: 1px solid rgba(244, 123, 32, 0.3); padding: 2px 7px;">
+                <i class="fa-solid fa-boxes-stacked" style="font-size: 9px; margin-right: 3px;"></i> CENTRAL STOCK
+              </span>
             </div>
-            <h2 id="dashInventory" style="font-size: 32px; margin-top: 8px; color: var(--status-blue);">850+</h2>
-            <p style="font-size: 12px; color: var(--text-gray); margin-top: 4px;">Allocated across events</p>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px;">
+              <h2 id="dashInventory" style="font-size: 32px; color: var(--primary-orange);">850+</h2>
+              <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(244, 123, 32, 0.14); border: 1.5px solid rgba(244, 123, 32, 0.4); display: flex; align-items: center; justify-content: center; color: var(--primary-orange);">
+                <i class="fa-solid fa-boxes-stacked" style="font-size: 16px;"></i>
+              </div>
+            </div>
+            <p style="font-size: 12px; color: var(--text-gray); margin-top: 4px;">Allocated across events • Tap to open Master Catalog</p>
           </div>
         </div>
 
@@ -335,8 +346,11 @@
 
         <!-- Distribution Filter & Search -->
         <div class="card" style="margin-bottom: 20px; padding: 14px;">
-          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
+          <div style="display: grid; grid-template-columns: 2fr 1.2fr 1fr 1fr; gap: 12px;" id="distFilterRow">
             <input type="text" id="distStudentSearch" placeholder="Search student name, S60 ID, or roll number..." oninput="loadDistributionMatrix()">
+            <select id="distItemFilter" onchange="onDistItemFilterChange()">
+              <option value="ALL">All Event Rewards</option>
+            </select>
             <select id="distSemesterFilter" onchange="loadDistributionMatrix()">
               <option value="">All Semesters</option>
               <option value="3">3rd Semester</option>
@@ -353,12 +367,25 @@
               <option value="PENDING">Pending (None received)</option>
             </select>
           </div>
+          <div id="distActiveItemBanner" style="display: none; margin-top: 12px; background: rgba(244, 123, 32, 0.1); border: 1px solid rgba(244, 123, 32, 0.3); border-radius: 8px; padding: 8px 14px; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--primary-navy);">
+              <i class="fa-solid fa-gift" style="color: var(--primary-orange);"></i>
+              <span>Active Item Filter: <strong id="distActiveItemName" style="color: var(--primary-orange);"></strong></span>
+            </div>
+            <button type="button" class="btn-secondary" onclick="clearDistributionItemFilter()" style="padding: 3px 10px; font-size: 11px;">Show All Rewards</button>
+          </div>
         </div>
 
         <!-- Summary Bar -->
-        <div id="distSummaryBar" class="card" style="margin-bottom: 16px; padding: 12px 20px; background: rgba(255, 215, 179, 0.3); border-color: var(--secondary-orange); display: flex; justify-content: space-between; align-items: center;">
-          <span id="distSummaryText" style="font-weight: 700; color: var(--primary-navy); font-size: 14px;">Loading event matrix...</span>
-          <span id="distCompletionRate" class="badge badge-active" style="font-size: 13px;">0% Complete</span>
+        <div id="distSummaryBar" class="card" style="margin-bottom: 16px; padding: 12px 20px; background: rgba(255, 215, 179, 0.3); border-color: var(--secondary-orange); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <span id="distSummaryText" style="font-weight: 700; color: var(--primary-navy); font-size: 14px;">Loading event matrix...</span>
+            <span id="distEventStatusBadge" class="badge badge-upcoming" style="font-size: 12px;">Upcoming</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <span id="distCompletionRate" class="badge badge-active" style="font-size: 13px;">0% Complete</span>
+            <div id="distCompleteEventBtnContainer"></div>
+          </div>
         </div>
 
         <!-- Distribution Cards Grid -->
@@ -367,12 +394,24 @@
 
       <!-- TAB 4: MASTER INVENTORY -->
       <section id="tab-inventory" class="tab-content" style="display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <div>
-            <h2 style="font-size: 24px;">Master Inventory Catalog</h2>
-            <p style="color: var(--text-gray); font-size: 13px;">All reusable inventory types: apparel, stationery, certificates, trophies, medals.</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 20px 24px; background: linear-gradient(135deg, rgba(244, 123, 32, 0.08) 0%, rgba(15, 43, 91, 0.04) 100%); border-radius: 18px; border: 1.5px solid rgba(244, 123, 32, 0.25); flex-wrap: wrap; gap: 16px;">
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #F47B20, #D8630A); display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; box-shadow: 0 4px 14px rgba(244, 123, 32, 0.35); flex-shrink: 0; border: 3px solid #FFF;">
+              <i class="fa-solid fa-boxes-stacked"></i>
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <h2 style="font-size: 24px; margin: 0;">Master Inventory Catalog</h2>
+              </div>
+              <p style="color: var(--text-gray); font-size: 13px; margin-top: 4px;">Central repository for all reusable inventory items: apparel, stationery, certificates, trophies & medals.</p>
+            </div>
           </div>
-          <button class="btn-primary" onclick="openAddMasterItemModal()"><i class="fa-solid fa-plus"></i> Add Item Catalog</button>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn-secondary" onclick="switchTab('distribution')" style="background: white; border-color: rgba(244, 123, 32, 0.4); color: var(--primary-navy);" title="Open Rewards & Distribution Portal">
+              <i class="fa-solid fa-clipboard-check" style="color: var(--primary-orange);"></i> Rewards & Distribution
+            </button>
+            <button class="btn-primary" onclick="openAddMasterItemModal()"><i class="fa-solid fa-plus"></i> Add Item Catalog</button>
+          </div>
         </div>
 
         <div id="masterInventoryContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;"></div>
@@ -413,9 +452,9 @@
           </div>
         </div>
 
-        <div class="card" style="padding: 0; overflow-x: auto;">
+        <div class="card scrollable-table-card" style="padding: 0; overflow-y: auto; overflow-x: auto; max-height: calc(100vh - 280px); min-height: 400px; border-radius: 16px; border: 1px solid var(--border-subtle); position: relative;">
           <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
-            <thead style="background: var(--surface-gray); color: var(--primary-navy); font-weight: 700;">
+            <thead style="position: sticky; top: 0; z-index: 10; background: #E9EEF5; color: var(--primary-navy); font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
               <tr>
                 <th style="padding: 14px 18px;">Student ID</th>
                 <th style="padding: 14px 18px;">Roll Number</th>
@@ -429,24 +468,62 @@
             <tbody id="studentsTableBody"></tbody>
           </table>
         </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; font-size: 12px; color: var(--text-gray); margin-top: 6px;">
+          <span id="studentsTotalCountText"><i class="fa-solid fa-users" style="color: var(--primary-orange);"></i> Total Students: 0</span>
+          <span style="display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-arrow-down-1-9" style="color: var(--primary-orange);"></i> Chronological Enlistment Order (1st enrolled to latest)</span>
+        </div>
       </section>
 
       <!-- TAB 6: REPORTS -->
       <section id="tab-reports" class="tab-content" style="display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
           <div>
             <h2 style="font-size: 24px;">Management Reports & Export</h2>
-            <p style="color: var(--text-gray); font-size: 13px;">Real-time database reporting and CSV/Excel downloads.</p>
+            <p style="color: var(--text-gray); font-size: 13px;">Live database analytics, detailed drill-down reports, and CSV downloads.</p>
           </div>
-          <div style="display: flex; gap: 10px;">
-            <button class="btn-primary" onclick="downloadCsvReport('distribution')"><i class="fa-solid fa-file-excel"></i> Export Distribution CSV</button>
-            <button class="btn-secondary" onclick="downloadCsvReport('events')"><i class="fa-solid fa-file-csv"></i> Export Events CSV</button>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn-primary" onclick="downloadReport('distribution', {}, 'excel')"><i class="fa-solid fa-file-excel"></i> Export Distribution (Excel)</button>
+            <button id="repBtnExportEvents" class="btn-secondary" onclick="downloadReport('events', {}, 'excel')"><i class="fa-solid fa-file-excel"></i> Export Events (Excel)</button>
+            <button id="repBtnExportMasterInv" class="btn-secondary" onclick="downloadReport('inventory_master', {}, 'excel')"><i class="fa-solid fa-boxes-stacked"></i> Export Master Inventory (Excel)</button>
           </div>
         </div>
 
-        <div class="card" style="margin-bottom: 20px;">
-          <h3 style="font-size: 16px; margin-bottom: 14px;">Event Inventory Distribution Analytics</h3>
+        <!-- Subtabs: 1. Event Reports | 2. Master / Personal Inventory Report -->
+        <div style="display: flex; background: var(--surface-gray); padding: 5px; border-radius: 12px; margin-bottom: 20px; width: fit-content; gap: 6px; border: 1px solid var(--border-subtle);">
+          <button type="button" id="repSubTabEvents" class="report-subtab-btn active" onclick="switchReportsSubTab('events')">
+            <i class="fa-solid fa-calendar-check"></i> 1. Event Reports
+          </button>
+          <button type="button" id="repSubTabInventory" class="report-subtab-btn" onclick="switchReportsSubTab('inventory')">
+            <i class="fa-solid fa-warehouse"></i> 2. Master / Personal Inventory Report
+          </button>
+        </div>
+
+        <!-- Event Reports View -->
+        <div id="repEventsView" class="card" style="margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h3 style="font-size: 16px;">Event Inventory Distribution Analytics</h3>
+              <p style="font-size: 12px; color: var(--text-gray); margin-top: 2px;">Click on any <strong>Event UID</strong> or <strong>Event Name</strong> to inspect full details and download its specific report.</p>
+            </div>
+            <div style="font-size: 12px; color: var(--text-gray);">
+              <i class="fa-solid fa-circle-info" style="color: var(--primary-orange);"></i> Click row ID to open single event report
+            </div>
+          </div>
           <div id="reportsContainer" style="overflow-x: auto;"></div>
+        </div>
+
+        <!-- Master / Personal Inventory Report View -->
+        <div id="repInventoryView" class="card" style="display: none; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h3 style="font-size: 16px;">Master & Standalone Inventory Report</h3>
+              <p style="font-size: 12px; color: var(--text-gray); margin-top: 2px;">Personal and master inventory items stored in catalog. Click any <strong>Item Name</strong> to see allocations and download its specific report.</p>
+            </div>
+            <button class="btn-secondary" onclick="downloadReport('inventory_master', {}, 'excel')" style="padding: 6px 12px; font-size: 12px;">
+              <i class="fa-solid fa-file-excel"></i> Download Full Catalog (Excel)
+            </button>
+          </div>
+          <div id="masterReportsContainer" style="overflow-x: auto;"></div>
         </div>
       </section>
 
@@ -519,18 +596,37 @@
             <input type="text" id="evVenue" value="SVIET Campus Lab">
           </div>
         </div>
-        <div style="margin-bottom: 14px;">
-          <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Semester Scheme *</label>
-          <select id="evScheme" onchange="updateEventModalSemesters()" style="margin-top: 4px;">
-            <option value="ODD">ODD Scheme</option>
-            <option value="EVEN">EVEN Scheme</option>
-          </select>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; align-items: flex-start;">
+          <div>
+            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Semester Scheme *</label>
+            <select id="evScheme" onchange="updateEventModalSemesters()" style="margin-top: 4px;">
+              <option value="ODD">ODD Scheme</option>
+              <option value="EVEN">EVEN Scheme</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Event Photo (Optional)</label>
+            <div style="margin-top: 4px; display: flex; align-items: center; gap: 8px;">
+              <input type="file" id="evPhotoInput" accept="image/*" style="display: none;" onchange="handleEventPhotoSelect(event)">
+              <input type="hidden" id="evPhotoUrl">
+              <button type="button" id="evPhotoUploadBtn" class="btn-secondary" onclick="document.getElementById('evPhotoInput').click()" style="padding: 9px 12px; font-size: 12px; flex: 1; justify-content: center; height: 38px;">
+                <i class="fa-solid fa-camera"></i> Upload Photo
+              </button>
+              <div id="evPhotoPreviewBox" style="display: none; align-items: center; gap: 6px;">
+                <img id="evPhotoPreviewImg" src="" style="width: 38px; height: 38px; border-radius: 8px; object-fit: cover; border: 1.5px solid var(--primary-orange);" alt="Preview">
+                <button type="button" onclick="removeEventPhoto()" class="btn-danger" style="padding: 6px; min-width: 28px; min-height: 28px; font-size: 11px;" title="Remove Photo">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 448 512" fill="currentColor"><path d="M135.2 17.7C140.6 6.8 151.7 0 163.8 0H284.2c12.1 0 23.2 6.8 28.6 17.7L320 32h96c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 96 0 81.7 0 64S14.3 32 32 32h96l7.2-14.3zM32 128H416V448c0 35.3-28.7 64-64 64H96c-35.3 0-64-28.7-64-64V128zm96 64c-8.8 0-16 7.2-16 16V432c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16zm96 0c-8.8 0-16 7.2-16 16V432c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16zm96 0c-8.8 0-16 7.2-16 16V432c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16z"/></svg>
+                </button>
+              </div>
+            </div>
+            <span id="evPhotoUploadStatus" style="font-size: 10px; color: var(--text-gray); margin-top: 3px; display: block;">Banner, certificate sample, or venue photo</span>
+          </div>
         </div>
 
         <div style="margin-bottom: 16px;">
           <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Select Applicable Semesters *</label>
           <p style="font-size: 11px; color: var(--text-gray); margin-bottom: 8px;">Choose which specific semester students are eligible for this event:</p>
-          <div id="evSemestersCheckboxes" style="display: flex; gap: 16px; flex-wrap: wrap; background: var(--surface-gray); padding: 12px 16px; border-radius: 12px;">
+          <div id="evSemestersCheckboxes" style="display: flex; gap: 14px; flex-wrap: wrap; background: var(--surface-gray); padding: 12px 16px; border-radius: 12px; align-items: center;">
             <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--primary-navy);">
               <input type="checkbox" name="evSem" value="3" checked> 3rd Semester
             </label>
@@ -540,6 +636,14 @@
             <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--primary-navy);">
               <input type="checkbox" name="evSem" value="7" checked> 7th Semester
             </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--primary-orange);">
+              <input type="checkbox" id="evCustomAudienceCheckbox" onchange="toggleCustomAudienceInput()"> Custom Guest
+            </label>
+          </div>
+          <div id="evCustomAudienceContainer" style="display: none; width: 100%; margin-top: 8px;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--primary-orange); display: block; margin-bottom: 4px;"><i class="fa-solid fa-user-tag"></i> Custom Guest / Non-S60 Recipient Details (Optional):</label>
+            <input type="text" id="evCustomAudienceText" placeholder="e.g. Chief Guest, External Judge, Faculty, Special Attendee..." style="width: 100%; font-size: 12px; padding: 8px 12px; border-radius: 8px; border: 1.5px solid var(--primary-orange); background: #FFF8E8;">
+            <span style="font-size: 10px; color: var(--text-gray); display: block; margin-top: 3px;">Allows guests/non-S60 participants to receive prizes and rewards from S60.</span>
           </div>
         </div>
 
@@ -566,10 +670,11 @@
 
       <div style="background: var(--surface-gray); padding: 14px; border-radius: 12px; margin-bottom: 18px;">
         <p id="evtDetDesc" style="font-size: 13px; color: var(--text-gray); margin-bottom: 8px;"></p>
-        <div style="display: flex; gap: 16px; font-size: 12px; font-weight: 600; color: var(--primary-navy); flex-wrap: wrap;">
+        <div style="display: flex; gap: 16px; font-size: 12px; font-weight: 600; color: var(--primary-navy); flex-wrap: wrap; align-items: center;">
           <span><i class="fa-solid fa-calendar" style="color: var(--primary-orange);"></i> <span id="evtDetDate"></span></span>
           <span><i class="fa-solid fa-location-dot" style="color: var(--primary-orange);"></i> <span id="evtDetVenue"></span></span>
           <span><i class="fa-solid fa-layer-group" style="color: var(--primary-orange);"></i> <span id="evtDetSemesters"></span></span>
+          <span id="evtDetPhotoBtnContainer" style="display: none;"></span>
         </div>
       </div>
 
@@ -580,25 +685,110 @@
 
       <div id="evtDetInventoryTable" style="margin-bottom: 20px;"></div>
 
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
-        <button class="btn-secondary" onclick="archiveCurrentEvent()"><i class="fa-solid fa-box-archive"></i> Archive Event</button>
-        <button class="btn-primary" onclick="goToEventDistribution()"><i class="fa-solid fa-clipboard-check"></i> Open Distribution Portal</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary" onclick="archiveCurrentEvent()"><i class="fa-solid fa-box-archive"></i> Archive Event</button>
+          <button class="btn-danger" onclick="deleteCurrentEvent()"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 448 512" fill="currentColor" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M135.2 17.7C140.6 6.8 151.7 0 163.8 0H284.2c12.1 0 23.2 6.8 28.6 17.7L320 32h96c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 96 0 81.7 0 64S14.3 32 32 32h96l7.2-14.3zM32 128H416V448c0 35.3-28.7 64-64 64H96c-35.3 0-64-28.7-64-64V128zm96 64c-8.8 0-16 7.2-16 16V432c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16zm96 0c-8.8 0-16 7.2-16 16V432c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16zm96 0c-8.8 0-16 7.2-16 16V432c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16z"/></svg> Delete Event</button>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <div id="evtDetCompleteBtnContainer"></div>
+          <button class="btn-primary" onclick="goToEventDistribution()"><i class="fa-solid fa-clipboard-check"></i> Open Distribution Portal</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVENT FULL PHOTO LIGHTBOX MODAL -->
+  <div id="eventPhotoModal" class="modal-overlay" onclick="if(event.target===this) closeModal('eventPhotoModal')">
+    <div class="modal-box" style="max-width: 820px; max-height: 90vh; display: flex; flex-direction: column; padding: 20px; background: #ffffff; border-radius: 20px; box-shadow: 0 20px 60px rgba(15, 43, 91, 0.25);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(244, 123, 32, 0.12); display: flex; align-items: center; justify-content: center; color: var(--primary-orange);">
+            <i class="fa-solid fa-image" style="font-size: 20px;"></i>
+          </div>
+          <div>
+            <h3 id="evPhotoModalTitle" style="font-size: 17px; margin: 0; color: var(--primary-navy);">Event Photo</h3>
+            <span id="evPhotoModalSubtitle" style="font-size: 12px; color: var(--text-gray);"></span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <a id="evPhotoModalDownloadBtn" href="#" download="event_photo.jpg" class="btn-secondary" style="padding: 6px 14px; font-size: 12px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-download"></i> Download
+          </a>
+          <button onclick="closeModal('eventPhotoModal')" style="border: none; background: transparent; font-size: 24px; cursor: pointer; color: var(--text-gray); line-height: 1;">&times;</button>
+        </div>
+      </div>
+      <div id="evPhotoModalBody" style="flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; background: #00000008; border-radius: 14px; padding: 12px; min-height: 320px; max-height: 70vh;">
+        <img id="evPhotoModalImg" src="" alt="Full Event Photo" style="max-width: 100%; max-height: 68vh; object-fit: contain; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
       </div>
     </div>
   </div>
 
   <!-- ADD EVENT ITEM MODAL -->
   <div id="addEventItemModal" class="modal-overlay">
-    <div class="modal-box" style="max-width: 440px;">
+    <div class="modal-box" style="max-width: 460px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h3 style="font-size: 16px;">Allocate Inventory to Event</h3>
         <button onclick="closeModal('addEventItemModal')" style="border: none; background: transparent; font-size: 18px; cursor: pointer;">&times;</button>
       </div>
+
+      <!-- Segmented switch -->
+      <div style="display: flex; background: var(--bg-cream); border-radius: 8px; padding: 4px; margin-bottom: 16px; border: 1px solid var(--border-subtle);">
+        <button type="button" id="webAllocTabCatalog" onclick="toggleWebAllocMode('catalog')" class="btn-sm" style="flex: 1; border: none; background: #fff; font-weight: bold; border-radius: 6px; padding: 6px; cursor: pointer; color: var(--primary-navy);">From Catalog</button>
+        <button type="button" id="webAllocTabCustom" onclick="toggleWebAllocMode('custom')" class="btn-sm" style="flex: 1; border: none; background: transparent; color: var(--text-gray); border-radius: 6px; padding: 6px; cursor: pointer;">+ Custom Item</button>
+      </div>
+
       <form onsubmit="handleAllocateEventInventory(event)">
-        <div style="margin-bottom: 14px;">
+        <div id="webAllocCatalogGroup" style="margin-bottom: 14px;">
           <label style="font-size: 12px; font-weight: bold;">Catalog Item *</label>
-          <select id="allocItemSelect" required></select>
+          <select id="allocItemSelect"></select>
         </div>
+
+        <div id="webAllocCustomGroup" style="display: none; margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: bold;">Item Name *</label>
+          <input type="text" id="allocCustomName" placeholder="e.g. Smart Watch, Laptop Bag" style="width: 100%; margin-bottom: 10px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <label style="font-size: 12px; font-weight: bold;">Category</label>
+              <select id="allocCustomCategory">
+                <option value="Apparel">Apparel</option>
+                <option value="Stationery">Stationery</option>
+                <option value="Certificate">Certificate</option>
+                <option value="Award">Award</option>
+                <option value="Gift">Gift</option>
+                <option value="Kit">Kit</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Prize">Prize</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: bold;">Unit</label>
+              <input type="text" id="allocCustomUnit" placeholder="units / pcs" value="units">
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Item Photo (Optional)</label>
+          <div style="display: flex; gap: 12px; align-items: center; margin-top: 6px;">
+            <div id="allocItemPhotoPreview" style="width: 50px; height: 50px; border-radius: 8px; border: 1px dashed var(--border-subtle); display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--surface-gray);">
+              <i class="fa-solid fa-image" style="color: var(--text-gray); font-size: 18px;"></i>
+            </div>
+            <div style="flex: 1;">
+              <input type="file" id="allocItemPhotoInput" accept="image/*" style="display: none;" onchange="handlePhotoSelect(event, 'allocItemPhotoPreview', 'allocItemPhotoData', 'allocItemRemovePhotoBtn')">
+              <input type="hidden" id="allocItemPhotoData">
+              <button type="button" class="btn-secondary" onclick="document.getElementById('allocItemPhotoInput').click()" style="padding: 5px 12px; font-size: 12px;">
+                <i class="fa-solid fa-camera"></i> Upload Photo
+              </button>
+              <button type="button" id="allocItemRemovePhotoBtn" onclick="removePhoto('allocItemPhotoPreview', 'allocItemPhotoData', 'allocItemRemovePhotoBtn')" class="btn-sm" style="display: none; margin-left: 6px; padding: 5px 10px; font-size: 11px; background: transparent; color: var(--status-red); border: 1px solid var(--border-subtle); border-radius: 6px; cursor: pointer;">
+                <i class="fa-solid fa-trash"></i> Remove
+              </button>
+              <div style="font-size: 11px; color: var(--text-gray); margin-top: 3px;">Upload item image or physical prize photo</div>
+            </div>
+          </div>
+        </div>
+
         <div style="margin-bottom: 14px;">
           <label style="font-size: 12px; font-weight: bold;">Initial Quantity *</label>
           <input type="number" id="allocQty" value="60" min="1" required>
@@ -724,7 +914,7 @@
 
   <!-- ADD MASTER INVENTORY ITEM MODAL -->
   <div id="addMasterItemModal" class="modal-overlay">
-    <div class="modal-box" style="max-width: 480px;">
+    <div class="modal-box" style="max-width: 500px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h3 style="font-size: 18px; color: var(--primary-navy);"><i class="fa-solid fa-box-open" style="color: var(--primary-orange);"></i> Add Master Item Catalog</h3>
         <button onclick="closeModal('addMasterItemModal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer;">&times;</button>
@@ -749,17 +939,150 @@
             </select>
           </div>
           <div>
-            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Unit *</label>
-            <input type="text" id="masterItemUnit" value="units" placeholder="e.g. units, pieces, kits" required style="margin-top: 4px;">
+            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Unit of Measurement *</label>
+            <input type="text" id="masterItemUnit" value="units" placeholder="e.g. units, pcs, kits" required style="margin-top: 4px;">
           </div>
+        </div>
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Item Photo (Optional)</label>
+          <div style="display: flex; gap: 12px; align-items: center; margin-top: 6px;">
+            <div id="masterItemPhotoPreview" style="width: 56px; height: 56px; border-radius: 8px; border: 1px dashed var(--border-subtle); display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--surface-gray);">
+              <i class="fa-solid fa-image" style="color: var(--text-gray); font-size: 20px;"></i>
+            </div>
+            <div style="flex: 1;">
+              <input type="file" id="masterItemPhotoInput" accept="image/*" style="display: none;" onchange="handlePhotoSelect(event, 'masterItemPhotoPreview', 'masterItemPhotoData', 'masterItemRemovePhotoBtn')">
+              <input type="hidden" id="masterItemPhotoData">
+              <button type="button" class="btn-secondary" onclick="document.getElementById('masterItemPhotoInput').click()" style="padding: 6px 12px; font-size: 12px;">
+                <i class="fa-solid fa-camera"></i> Upload Photo
+              </button>
+              <button type="button" id="masterItemRemovePhotoBtn" onclick="removePhoto('masterItemPhotoPreview', 'masterItemPhotoData', 'masterItemRemovePhotoBtn')" class="btn-sm" style="display: none; margin-left: 6px; padding: 6px 10px; font-size: 11px; background: transparent; color: var(--status-red); border: 1px solid var(--border-subtle); border-radius: 6px; cursor: pointer;">
+                <i class="fa-solid fa-trash"></i> Remove
+              </button>
+              <div style="font-size: 11px; color: var(--text-gray); margin-top: 4px;">PNG, JPG, WebP photo of physical stock</div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Total Units / Stock Quantity *</label>
+          <input type="number" id="masterItemQuantity" min="0" value="1" placeholder="e.g. 50" required style="margin-top: 4px;">
+          <span style="font-size: 11px; color: var(--text-gray); margin-top: 2px; display: block;">Number of physical items allocated/available in stock</span>
         </div>
         <div style="margin-bottom: 18px;">
           <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Description (Optional)</label>
-          <textarea id="masterItemDesc" rows="3" placeholder="Item specifications or details..." style="margin-top: 4px;"></textarea>
+          <textarea id="masterItemDesc" rows="2" placeholder="Item specifications or details..." style="margin-top: 4px;"></textarea>
         </div>
         <div style="display: flex; gap: 10px; justify-content: flex-end;">
           <button type="button" class="btn-secondary" onclick="closeModal('addMasterItemModal')">Cancel</button>
           <button type="submit" class="btn-primary">Add Item to Catalog</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MASTER ITEM DISTRIBUTE MODAL -->
+  <div id="masterDistributeModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 520px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 18px; color: var(--primary-navy);">
+          <i class="fa-solid fa-clipboard-check" style="color: var(--primary-orange);"></i> Distribute Item
+        </h3>
+        <button onclick="closeModal('masterDistributeModal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer;">&times;</button>
+      </div>
+
+      <!-- Item Info Header -->
+      <div style="display: flex; gap: 12px; align-items: center; background: rgba(244, 123, 32, 0.08); padding: 12px; border-radius: 10px; margin-bottom: 16px; border: 1px solid rgba(244, 123, 32, 0.2);">
+        <div id="mDistPhotoBox" style="width: 44px; height: 44px; border-radius: 10px; background: var(--primary-orange); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; overflow: hidden;">
+          <i class="fa-solid fa-box" style="font-size: 18px;"></i>
+        </div>
+        <div style="flex: 1;">
+          <div id="mDistItemName" style="font-weight: 700; font-size: 16px; color: var(--primary-navy);"></div>
+          <div id="mDistStockInfo" style="font-size: 12px; color: var(--text-gray); margin-top: 2px;"></div>
+        </div>
+      </div>
+
+      <!-- Mode 1: Multi-event chooser (when item is already linked to multiple events) -->
+      <div id="mDistMultiEventSection" style="display: none; margin-bottom: 16px;">
+        <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 12px;">This item is allocated across multiple events. Choose an event to proceed with distribution:</p>
+        <div id="mDistEventList" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto;"></div>
+        <div style="margin-top: 14px; text-align: center; border-top: 1px dashed var(--border-subtle); padding-top: 12px;">
+          <button type="button" class="btn-secondary" onclick="showMasterDistributeLinkNewForm()" style="font-size: 12px;">
+            <i class="fa-solid fa-plus"></i> Allocate to Another Event
+          </button>
+        </div>
+      </div>
+
+      <!-- Mode 2: Allocate & Distribute Form (when item has 0 events, or adding to another event) -->
+      <form id="mDistAllocateForm" onsubmit="handleMasterDistributeAllocate(event)" style="display: none;">
+        <input type="hidden" id="mDistItemId">
+        <div style="background: var(--surface-gray); padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 12px; color: var(--text-gray); line-height: 1.5;">
+          <i class="fa-solid fa-circle-info" style="color: var(--primary-orange);"></i>
+          <span id="mDistHelpText">Target event is optional. You can assign to an event or distribute directly from master inventory.</span>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Target Event (Optional)</label>
+          <select id="mDistTargetEvent" style="margin-top: 4px; width: 100%;"></select>
+          <span style="font-size: 11px; color: var(--text-gray); margin-top: 2px; display: block;">Leave blank if keeping/distributing from Standalone Master Inventory without an event.</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Units to Allocate *</label>
+            <input type="number" id="mDistQty" min="1" required style="margin-top: 4px;">
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Student Eligibility *</label>
+            <select id="mDistEligibility" onchange="toggleMDistSemesterFilter()" style="margin-top: 4px;">
+              <option value="ALL">All Event Participants</option>
+              <option value="SEMESTER">Specific Semester</option>
+              <option value="WINNERS">Event Winners Only</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="mDistSemesterGroup" style="display: none; margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Target Semester *</label>
+          <select id="mDistSemester" style="margin-top: 4px;">
+            <option value="3">3rd Semester</option>
+            <option value="4">4th Semester</option>
+            <option value="5">5th Semester</option>
+            <option value="6">6th Semester</option>
+            <option value="7">7th Semester</option>
+            <option value="8">8th Semester</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px;">
+          <button type="button" class="btn-secondary" onclick="closeModal('masterDistributeModal')">Cancel</button>
+          <button type="submit" class="btn-primary">
+            <i class="fa-solid fa-clipboard-check"></i> Allocate & Open Distribution
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- EDIT STOCK / UNITS MODAL -->
+  <div id="editStockModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 440px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 18px; color: var(--primary-navy);"><i class="fa-solid fa-pen-to-square" style="color: var(--primary-orange);"></i> Update Stock Units</h3>
+        <button onclick="closeModal('editStockModal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer;">&times;</button>
+      </div>
+      <form onsubmit="handleUpdateStock(event)">
+        <input type="hidden" id="editStockItemId">
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Item</label>
+          <div id="editStockItemName" style="font-size: 14px; font-weight: 700; color: var(--primary-orange); margin-top: 4px;"></div>
+        </div>
+        <div style="margin-bottom: 18px;">
+          <label style="font-size: 12px; font-weight: bold; color: var(--primary-navy);">Total Allocated Units / Stock *</label>
+          <input type="number" id="editStockQuantity" min="0" required style="margin-top: 4px;">
+          <span style="font-size: 11px; color: var(--text-gray); margin-top: 4px; display: block;">Set or adjust total units allocated to this item</span>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" class="btn-secondary" onclick="closeModal('editStockModal')">Cancel</button>
+          <button type="submit" class="btn-primary">Save Units</button>
         </div>
       </form>
     </div>
@@ -826,10 +1149,86 @@
     </div>
   </div>
 
+  <!-- EVENT REPORT DETAIL MODAL -->
+  <div id="eventReportDetailModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 780px; max-height: 90vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: var(--primary-orange); display: flex; align-items: center; justify-content: center; color: white;">
+            <i class="fa-solid fa-calendar-check"></i>
+          </div>
+          <div>
+            <h3 id="evRepModalTitle" style="font-size: 18px; margin: 0; color: var(--primary-navy);">Event Report</h3>
+            <span id="evRepModalSubtitle" style="font-size: 12px; color: var(--text-gray);"></span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="evRepModalDownloadBtn" class="btn-primary" style="padding: 7px 14px; font-size: 12px;">
+            <i class="fa-solid fa-download"></i> Download CSV
+          </button>
+          <button onclick="closeModal('eventReportDetailModal')" style="border: none; background: transparent; font-size: 24px; cursor: pointer; color: var(--text-gray);">&times;</button>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Strip -->
+      <div id="evRepStatsStrip" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 18px;"></div>
+
+      <!-- Allocated Inventory Items -->
+      <div style="margin-bottom: 18px;">
+        <h4 style="font-size: 14px; margin-bottom: 8px; color: var(--primary-navy);"><i class="fa-solid fa-boxes-stacked" style="color: var(--primary-orange);"></i> Allocated Event Inventory</h4>
+        <div id="evRepItemsContainer" style="overflow-x: auto;"></div>
+      </div>
+
+      <!-- Student Distributions List -->
+      <div>
+        <h4 style="font-size: 14px; margin-bottom: 8px; color: var(--primary-navy);"><i class="fa-solid fa-user-check" style="color: var(--status-green);"></i> Student Distribution Records</h4>
+        <div id="evRepDistsContainer" style="overflow-x: auto; max-height: 260px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVENTORY ITEM REPORT DETAIL MODAL -->
+  <div id="itemReportDetailModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 740px; max-height: 90vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div id="itemRepPhotoBox" style="width: 44px; height: 44px; border-radius: 10px; background: var(--primary-orange); display: flex; align-items: center; justify-content: center; color: white; overflow: hidden; flex-shrink: 0;">
+            <i class="fa-solid fa-box-open" style="font-size: 20px;"></i>
+          </div>
+          <div>
+            <h3 id="itemRepModalTitle" style="font-size: 18px; margin: 0; color: var(--primary-navy);">Item Report</h3>
+            <span id="itemRepModalSubtitle" style="font-size: 12px; color: var(--text-gray);"></span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="itemRepModalDownloadBtn" class="btn-primary" style="padding: 7px 14px; font-size: 12px;">
+            <i class="fa-solid fa-download"></i> Download CSV
+          </button>
+          <button onclick="closeModal('itemReportDetailModal')" style="border: none; background: transparent; font-size: 24px; cursor: pointer; color: var(--text-gray);">&times;</button>
+        </div>
+      </div>
+
+      <!-- Item Metrics Strip -->
+      <div id="itemRepStatsStrip" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 18px;"></div>
+
+      <!-- Events Allocated Breakdown -->
+      <div style="margin-bottom: 18px;">
+        <h4 style="font-size: 14px; margin-bottom: 8px; color: var(--primary-navy);"><i class="fa-solid fa-calendar-check" style="color: var(--primary-orange);"></i> Event Allocations Breakdown</h4>
+        <div id="itemRepEventsContainer" style="overflow-x: auto;"></div>
+      </div>
+
+      <!-- Distribution History for this item -->
+      <div>
+        <h4 style="font-size: 14px; margin-bottom: 8px; color: var(--primary-navy);"><i class="fa-solid fa-clipboard-list" style="color: var(--status-green);"></i> Student Reward Distribution Log</h4>
+        <div id="itemRepDistsContainer" style="overflow-x: auto; max-height: 240px;"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATION -->
   <div id="toast" class="toast-msg"></div>
 
-  <script src="/portal/app.js"></script>
+  <script src="/portal/app.js?v=5"></script>
 
 </body>
 </html>

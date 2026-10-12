@@ -36,13 +36,17 @@ class AppProvider with ChangeNotifier {
   }
 
   Future<void> init() async {
-    await _api.init();
-    if (_api.isAuthenticated) {
-      try {
-        await refreshSessionAndDashboard();
-      } catch (e) {
-        await _api.logout();
+    try {
+      await _api.init();
+      if (_api.isAuthenticated) {
+        try {
+          await refreshSessionAndDashboard();
+        } catch (e) {
+          debugPrint('Network refresh on init failed: $e');
+        }
       }
+    } catch (e) {
+      debugPrint('AppProvider init failed: $e');
     }
   }
 

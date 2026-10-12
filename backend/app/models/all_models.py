@@ -80,6 +80,8 @@ class Event(Base):
     academic_session_id = Column(Integer, ForeignKey("academic_sessions.id"), nullable=True)
     semester_scheme = Column(String(10), default="ODD", nullable=False)  # ODD or EVEN
     applicable_semesters = Column(String(50), default="3,5,7", nullable=False)  # comma separated: "3,5,7" or "4,6,8"
+    custom_audience = Column(String(200), nullable=True)  # "Guests", "External Judges", "Faculty", etc.
+    image_url = Column(Text, nullable=True)  # Event physical banner / prize photo URL or base64
     created_by_id = Column(Integer, ForeignKey("admins.id"), nullable=True)
     created_at = Column(DateTime, default=utcnow, nullable=False)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
@@ -115,10 +117,13 @@ class InventoryItem(Base):
     unit = Column(String(20), default="units", nullable=False)
     description = Column(Text, nullable=True)
     default_sku = Column(String(50), nullable=True)
+    initial_stock = Column(Integer, default=0, nullable=False)
+    created_source = Column(String(50), default="MASTER", nullable=False)  # "MASTER" or "EVENT"
+    image_url = Column(Text, nullable=True)  # URL or Base64 data string
     created_at = Column(DateTime, default=utcnow, nullable=False)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
-    event_allocations = relationship("EventInventory", back_populates="inventory_item")
+    event_allocations = relationship("EventInventory", back_populates="inventory_item", cascade="all, delete-orphan")
 
 
 class EventInventory(Base):
@@ -133,6 +138,7 @@ class EventInventory(Base):
     eligibility_type = Column(String(30), default="ALL", nullable=False)  # ALL, SEMESTER, SELECTED, WINNERS
     semester_filter = Column(Integer, nullable=True)  # e.g. 3 or 5 or 7
     low_stock_threshold = Column(Integer, default=10, nullable=False)
+    image_url = Column(Text, nullable=True)  # Specific allocation photo if overridden
     created_at = Column(DateTime, default=utcnow, nullable=False)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 

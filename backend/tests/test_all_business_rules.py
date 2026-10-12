@@ -61,6 +61,34 @@ def test_create_event_auto_uid(client, auth_headers):
     assert ev["name"] == "Cloud Native Architecture Summit"
     assert ev["event_uid"].startswith("S60-EVT-")
 
+def test_create_event_with_custom_guest_and_base64_photo(client, auth_headers):
+    fake_b64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA="
+    res = client.post("/api/v1/events", headers=auth_headers, json={
+        "name": "Global AI Conclave & Guest Awards",
+        "event_type": "Hackathon",
+        "description": "Including external judges and custom guests",
+        "event_date": "25 Oct 2026",
+        "event_time": "02:00 PM",
+        "venue": "Auditorium",
+        "applicable_semesters": [3, 5, 7],
+        "custom_audience": "Custom Guest (Industry Judges & Alumni)",
+        "image_url": fake_b64,
+        "status": "Upcoming"
+    })
+    assert res.status_code == 200
+    ev = res.json()["data"]
+    assert ev["name"] == "Global AI Conclave & Guest Awards"
+
+    # Verify event appears in list with custom_audience and image_url
+    list_res = client.get(f"/api/v1/events?search=Global AI Conclave", headers=auth_headers)
+    assert list_res.status_code == 200
+    items = list_res.json()["data"]["items"]
+    assert len(items) >= 1
+    found = next((i for i in items if i["name"] == "Global AI Conclave & Guest Awards"), None)
+    assert found is not None
+    assert found["custom_audience"] == "Custom Guest (Industry Judges & Alumni)"
+    assert found["image_url"] == fake_b64
+
 def test_distribution_stock_deduction_and_insufficient_stock(client, auth_headers):
     # 1. Get an active event detail
     events_res = client.get("/api/v1/events?search=Coding", headers=auth_headers)

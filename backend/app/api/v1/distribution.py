@@ -11,7 +11,7 @@ from app.models.all_models import (
 )
 from app.schemas.schemas import (
     ApiResponse, DistributionRecordResponse, BatchDistributionRequest,
-    DistributionSaveItem
+    DistributionSaveItem, DistributionRemarkRequest
 )
 from app.api.deps import get_current_admin
 
@@ -49,7 +49,7 @@ def get_event_distribution_matrix(
     st_query = db.query(Student).filter(Student.status == "ACTIVE")
     if semester:
         st_query = st_query.filter(Student.current_semester == semester)
-    else:
+    elif not search:
         st_query = st_query.filter(Student.current_semester.in_(sem_list))
 
     if search:
@@ -58,20 +58,24 @@ def get_event_distribution_matrix(
             (Student.name.ilike(s)) | (Student.student_id.ilike(s)) | (Student.roll_number.ilike(s))
         )
 
-    students = st_query.order_by(Student.student_id.asc()).all()
+    students = st_query.order_by(Student.id.asc()).all()
 
-    # Query existing active distributions for this event
-    existing_dists = db.query(Distribution).filter(
-        Distribution.event_id == event_id,
-        Distribution.status == "DISTRIBUTED"
-    ).all()
+    # Query all existing distributions for this event (DISTRIBUTED, PENDING_REMARK, CANCELLED)
+    all_dists = db.query(Distribution).filter(
+        Distribution.event_id == event_id
+    ).order_by(Distribution.id.asc()).all()
 
-    # Map (student_id, event_inventory_id) -> Distribution
-    dist_map = {(d.student_id, d.event_inventory_id): d for d in existing_dists}
+    # Map (student_id, event_inventory_id) -> Distribution, prioritizing DISTRIBUTED
+    dist_map = {}
+    for d in all_dists:
+        prev = dist_map.get((d.student_id, d.event_inventory_id))
+        if not prev or d.status == "DISTRIBUTED" or prev.status != "DISTRIBUTED":
+            dist_map[(d.student_id, d.event_inventory_id)] = d
 
     matrix_rows = []
     summary_received_total = 0
     summary_eligible_total = 0
+    summary_remarked_total = 0
 
     for st in students:
         is_winner = st.id in winner_map
@@ -96,11 +100,15 @@ def get_event_distribution_matrix(
 
             dist_rec = dist_map.get((st.id, inv.id))
             received = (dist_rec is not None and dist_rec.status == "DISTRIBUTED")
+            remarks_text = (dist_rec.remarks or "").strip() if dist_rec else ""
+            has_remark = bool(remarks_text)
 
             if eligible:
                 student_eligible_count += 1
                 if received:
                     student_received_count += 1
+                elif has_remark:
+                    summary_remarked_total += 1
 
             items_status[inv.id] = {
                 "inventory_item_id": inv.inventory_item_id,
@@ -108,10 +116,12 @@ def get_event_distribution_matrix(
                 "category": inv.inventory_item.category if inv.inventory_item else "",
                 "eligible": eligible,
                 "received": received,
-                "quantity": dist_rec.quantity if dist_rec else 0,
-                "distribution_id": dist_rec.id if dist_rec else None,
-                "distributed_at": dist_rec.distributed_at.isoformat() if dist_rec else None,
-                "remaining_stock": inv.remaining_quantity
+                "quantity": dist_rec.quantity if (dist_rec and received) else 0,
+                "distribution_id": dist_rec.id if (dist_rec and received) else None,
+                "distributed_at": dist_rec.distributed_at.isoformat() if (dist_rec and received) else None,
+                "remaining_stock": inv.remaining_quantity,
+                "remarks": remarks_text,
+                "has_remark": has_remark
             }
 
         # Determine row status
@@ -145,6 +155,49 @@ def get_event_distribution_matrix(
             "status": row_status
         })
 
+    # Calculate global completion readiness across ALL active students for this event
+    all_applicable_students = db.query(Student).filter(
+        Student.status == "ACTIVE",
+        Student.current_semester.in_(sem_list)
+    ).all()
+
+    global_eligible_count = 0
+    global_distributed_count = 0
+    global_remarked_count = 0
+    unaccounted_list = []
+
+    for st in all_applicable_students:
+        is_win = st.id in winner_map
+        for inv in event_inventories:
+            el = False
+            if inv.eligibility_type == "ALL":
+                el = True
+            elif inv.eligibility_type == "SEMESTER":
+                el = (inv.semester_filter is None or st.current_semester == inv.semester_filter)
+            elif inv.eligibility_type == "WINNERS":
+                el = is_win
+            elif inv.eligibility_type == "SELECTED":
+                el = True
+
+            if not el:
+                continue
+
+            global_eligible_count += 1
+            rec = dist_map.get((st.id, inv.id))
+            is_dist = (rec is not None and rec.status == "DISTRIBUTED")
+            has_rem = (rec is not None and bool((rec.remarks or "").strip()))
+
+            if is_dist:
+                global_distributed_count += 1
+            elif has_rem:
+                global_remarked_count += 1
+            else:
+                item_name = inv.inventory_item.name if inv.inventory_item else "Item"
+                unaccounted_list.append(f"{st.name} ({st.roll_number}) - {item_name}")
+
+    unaccounted_count = len(unaccounted_list)
+    can_complete = (unaccounted_count == 0)
+
     # Inventory headers
     inventory_columns = [
         {
@@ -165,6 +218,7 @@ def get_event_distribution_matrix(
             "event_id": event.id,
             "event_uid": event.event_uid,
             "event_name": event.name,
+            "event_status": event.status,
             "event_date": event.event_date,
             "inventory_columns": inventory_columns,
             "rows": matrix_rows,
@@ -172,7 +226,14 @@ def get_event_distribution_matrix(
             "summary": {
                 "total_eligible_items": summary_eligible_total,
                 "total_distributed_items": summary_received_total,
-                "completion_rate": round(summary_received_total / summary_eligible_total * 100, 1) if summary_eligible_total > 0 else 0
+                "total_remarked_items": summary_remarked_total,
+                "completion_rate": round(summary_received_total / summary_eligible_total * 100, 1) if summary_eligible_total > 0 else 0,
+                "global_eligible_items": global_eligible_count,
+                "global_distributed_items": global_distributed_count,
+                "global_remarked_items": global_remarked_count,
+                "can_complete": can_complete,
+                "unaccounted_count": unaccounted_count,
+                "unaccounted_sample": unaccounted_list[:5]
             }
         }
     )
@@ -202,11 +263,10 @@ def record_distribution(
     existing = db.query(Distribution).filter(
         Distribution.event_id == ev_inv.event_id,
         Distribution.student_id == student.id,
-        Distribution.event_inventory_id == ev_inv.id,
-        Distribution.status == "DISTRIBUTED"
-    ).first()
+        Distribution.event_inventory_id == ev_inv.id
+    ).order_by(Distribution.id.desc()).first()
 
-    if existing:
+    if existing and existing.status == "DISTRIBUTED":
         raise HTTPException(
             status_code=400,
             detail=f"{student.name} has already received '{item_name}' for this event."
@@ -227,21 +287,33 @@ def record_distribution(
     ev = ev_inv.event
     session_name = ev.academic_session.session_name if (ev and ev.academic_session) else "2026-27"
 
-    # Create Distribution record
-    dist = Distribution(
-        event_id=ev_inv.event_id,
-        student_id=student.id,
-        event_inventory_id=ev_inv.id,
-        quantity=qty,
-        status="DISTRIBUTED",
-        distributed_at=utcnow(),
-        distributed_by_id=admin.id,
-        distributed_by_name=admin.full_name,
-        semester_at_distribution=student.current_semester,  # Immutable historical snapshot
-        session_at_distribution=session_name,
-        remarks=item_data.remarks
-    )
-    db.add(dist)
+    # Create or update Distribution record
+    if existing:
+        dist = existing
+        dist.quantity = qty
+        dist.status = "DISTRIBUTED"
+        dist.distributed_at = utcnow()
+        dist.distributed_by_id = admin.id
+        dist.distributed_by_name = admin.full_name
+        dist.semester_at_distribution = student.current_semester
+        dist.session_at_distribution = session_name
+        if item_data.remarks is not None:
+            dist.remarks = item_data.remarks
+    else:
+        dist = Distribution(
+            event_id=ev_inv.event_id,
+            student_id=student.id,
+            event_inventory_id=ev_inv.id,
+            quantity=qty,
+            status="DISTRIBUTED",
+            distributed_at=utcnow(),
+            distributed_by_id=admin.id,
+            distributed_by_name=admin.full_name,
+            semester_at_distribution=student.current_semester,  # Immutable historical snapshot
+            session_at_distribution=session_name,
+            remarks=item_data.remarks
+        )
+        db.add(dist)
 
     # Atomically decrement remaining and increment distributed
     ev_inv.distributed_quantity += qty
@@ -391,6 +463,89 @@ def reverse_distribution(
             "restored_remaining_stock": ev_inv.remaining_quantity if ev_inv else 0
         },
         message=f"Distribution reversed. {dist.quantity} unit returned to inventory."
+    )
+
+@router.post("/remark", response_model=ApiResponse)
+def update_distribution_remark(
+    data: DistributionRemarkRequest,
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(get_current_admin)
+):
+    """
+    CRITICAL REQUIREMENT:
+    Records or updates a remark for an unreceived / pending inventory item for a student.
+    Does not decrement inventory stock.
+    Required for event completion when item is not distributed.
+    """
+    event = db.query(Event).filter(Event.id == data.event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found.")
+
+    student = db.query(Student).filter(Student.id == data.student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found.")
+
+    ev_inv = db.query(EventInventory).filter(EventInventory.id == data.event_inventory_id).first()
+    if not ev_inv:
+        raise HTTPException(status_code=404, detail="Event inventory item not found.")
+
+    item_name = ev_inv.inventory_item.name if ev_inv.inventory_item else "Item"
+    remarks_clean = data.remarks.strip() if data.remarks else ""
+
+    # Check existing distribution record
+    dist = db.query(Distribution).filter(
+        Distribution.event_id == data.event_id,
+        Distribution.student_id == data.student_id,
+        Distribution.event_inventory_id == data.event_inventory_id
+    ).order_by(Distribution.id.desc()).first()
+
+    session_name = event.academic_session.session_name if event.academic_session else "2026-27"
+
+    if dist:
+        dist.remarks = remarks_clean if remarks_clean else None
+        if dist.status != "DISTRIBUTED":
+            dist.status = "PENDING_REMARK" if remarks_clean else "CANCELLED"
+            dist.quantity = 0
+            dist.distributed_by_id = admin.id
+            dist.distributed_by_name = admin.full_name
+            dist.updated_at = utcnow()
+    else:
+        dist = Distribution(
+            event_id=event.id,
+            student_id=student.id,
+            event_inventory_id=ev_inv.id,
+            quantity=0,
+            status="PENDING_REMARK" if remarks_clean else "PENDING",
+            distributed_at=utcnow(),
+            distributed_by_id=admin.id,
+            distributed_by_name=admin.full_name,
+            semester_at_distribution=student.current_semester,
+            session_at_distribution=session_name,
+            remarks=remarks_clean if remarks_clean else None
+        )
+        db.add(dist)
+
+    audit = AuditLog(
+        admin_id=admin.id,
+        admin_name=admin.full_name,
+        action="UPDATE_DISTRIBUTION_REMARK",
+        entity_type="Distribution",
+        entity_id=f"{student.student_id}:{item_name}",
+        new_data=f"Updated remark for {student.name} ({student.student_id}) on {item_name}: '{remarks_clean}'"
+    )
+    db.add(audit)
+    db.commit()
+
+    return ApiResponse(
+        success=True,
+        message=f"Remark for {student.name} updated successfully.",
+        data={
+            "student_id": student.id,
+            "student_name": student.name,
+            "event_inventory_id": ev_inv.id,
+            "remarks": remarks_clean,
+            "has_remark": bool(remarks_clean)
+        }
     )
 
 @router.get("/history", response_model=ApiResponse)

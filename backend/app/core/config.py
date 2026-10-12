@@ -11,6 +11,13 @@ class Settings(BaseSettings):
     
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./s60inventory.db")
     
+    @property
+    def clean_database_url(self) -> str:
+        url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
+    
     JWT_SECRET: str = os.getenv("JWT_SECRET", "super60_sviet_management_secret_key_change_in_production_2026")
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 1440))

@@ -29,8 +29,8 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [2/3] Building release APK...
-call flutter build apk --release --split-per-abi=false
+echo [2/3] Building release universal APK for all Android devices...
+call flutter build apk --release --android-skip-build-dependency-validation
 if %errorlevel% neq 0 (
     echo [ERROR] APK build failed. Please verify Android SDK is installed.
     pause
@@ -38,9 +38,12 @@ if %errorlevel% neq 0 (
 )
 
 echo.
+echo [3/3] Copying APK to root directory...
+copy /y "%~dp0mobile\build\app\outputs\flutter-apk\app-release.apk" "%~dp0S60_Inventory_Release.apk" >nul
+
 echo ========================================================
-echo   SUCCESS! Your installable APK has been created at:
-echo   %~dp0mobile\build\app\outputs\flutter-apk\app-release.apk
+echo   SUCCESS! Universal APK for all phones created at:
+echo   %~dp0S60_Inventory_Release.apk
 echo ========================================================
 echo.
 explorer "%~dp0mobile\build\app\outputs\flutter-apk"

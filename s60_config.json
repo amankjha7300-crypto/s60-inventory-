@@ -1,0 +1,4 @@
+{
+  "server_url": "",
+  "description": "To connect all computers and mobile devices to a single shared database, paste your cloud URL here (e.g., https://s60-inventory.onrender.com). Leave empty to use standalone local mode."
+}

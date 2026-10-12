@@ -36,7 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(16),
@@ -51,34 +51,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textGray, fontFamily: 'Poppins'),
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textGray, fontFamily: 'Poppins'),
+                    ),
                   ),
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(icon, size: 18, color: color),
+                    child: Icon(icon, size: 16, color: color),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                value,
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: color, fontFamily: 'Poppins'),
+              const SizedBox(height: 6),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color, fontFamily: 'Poppins'),
+                ),
               ),
               if (subtitle != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(fontSize: 11, color: AppColors.textGray.withOpacity(0.8), fontFamily: 'Poppins'),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 10.5, color: AppColors.textGray.withOpacity(0.8), fontFamily: 'Poppins'),
+                  ),
                 ),
               ],
             ],
@@ -155,47 +170,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 20),
 
               // 4 Core Metric Cards Grid
-              GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 1.35,
-                children: [
-                  _buildStatCard(
-                    title: "Active Students",
-                    value: "${dash?.activeStudentsCount ?? 180}",
-                    icon: Icons.people_outline,
-                    color: AppColors.primaryNavy,
-                    subtitle: "Across ${dash?.activeSemesters.length ?? 3} active batches",
-                    onTap: () => widget.onTabChange?.call(1),
-                  ),
-                  _buildStatCard(
-                    title: "Saved Events",
-                    value: "${dash?.totalEventsCount ?? 4}",
-                    icon: Icons.event_note,
-                    color: AppColors.primaryOrange,
-                    subtitle: "${dash?.activeEventsCount ?? 2} active/ongoing",
-                    onTap: () => widget.onTabChange?.call(2),
-                  ),
-                  _buildStatCard(
-                    title: "Distributed Items",
-                    value: "${dash?.totalDistributedUnits ?? 710}",
-                    icon: Icons.check_circle_outline,
-                    color: AppColors.statusDistributed,
-                    subtitle: "${dash?.totalPendingUnits ?? 140} pending units",
-                    onTap: () => widget.onTabChange?.call(3),
-                  ),
-                  _buildStatCard(
-                    title: "Total Inventory",
-                    value: "${dash?.totalInventoryUnits ?? 850}+",
-                    icon: Icons.inventory_2_outlined,
-                    color: AppColors.statusPartial,
-                    subtitle: "Units across all events",
-                    onTap: () => widget.onTabChange?.call(4),
-                  ),
-                ],
+              Builder(
+                builder: (context) {
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  final cardRatio = screenWidth < 360 ? 1.02 : (screenWidth < 400 ? 1.10 : 1.18);
+                  return GridView.count(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    childAspectRatio: cardRatio,
+                    children: [
+                      _buildStatCard(
+                        title: "Active Students",
+                        value: "${dash?.activeStudentsCount ?? 180}",
+                        icon: Icons.people_outline,
+                        color: AppColors.primaryNavy,
+                        subtitle: "Across ${dash?.activeSemesters.length ?? 3} active batches",
+                        onTap: () => widget.onTabChange?.call(1),
+                      ),
+                      _buildStatCard(
+                        title: "Saved Events",
+                        value: "${dash?.totalEventsCount ?? 4}",
+                        icon: Icons.event_note,
+                        color: AppColors.primaryOrange,
+                        subtitle: "${dash?.activeEventsCount ?? 2} active/ongoing",
+                        onTap: () => widget.onTabChange?.call(2),
+                      ),
+                      _buildStatCard(
+                        title: "Distributed Items",
+                        value: "${dash?.totalDistributedUnits ?? 710}",
+                        icon: Icons.check_circle_outline,
+                        color: AppColors.statusDistributed,
+                        subtitle: "${dash?.totalPendingUnits ?? 140} pending units",
+                        onTap: () => widget.onTabChange?.call(3),
+                      ),
+                      _buildStatCard(
+                        title: "Total Inventory",
+                        value: "${dash?.totalInventoryUnits ?? 850}+",
+                        icon: Icons.inventory_2_outlined,
+                        color: AppColors.statusPartial,
+                        subtitle: "Units across all events",
+                        onTap: () => widget.onTabChange?.call(4),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 24),
 
@@ -212,12 +233,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onPressed: () {
                         widget.onTabChange?.call(1); // Jump to Students tab
                       },
-                      icon: const Icon(Icons.person_add_alt_1, size: 16, color: AppColors.primaryOrange),
-                      label: const Text("Enlist Student", style: TextStyle(color: AppColors.primaryNavy, fontSize: 12, fontWeight: FontWeight.bold)),
+                      icon: const Icon(Icons.person_add_alt_1, size: 15, color: AppColors.primaryOrange),
+                      label: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text("Enlist Student", style: TextStyle(color: AppColors.primaryNavy, fontSize: 11.5, fontWeight: FontWeight.bold)),
+                      ),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppColors.primaryOrange),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                         backgroundColor: AppColors.white,
                       ),
                     ),
@@ -231,12 +255,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           MaterialPageRoute(builder: (context) => const CreateEventScreen()),
                         ).then((_) => provider.refreshSessionAndDashboard());
                       },
-                      icon: const Icon(Icons.add_circle_outline, size: 16, color: AppColors.primaryNavy),
-                      label: const Text("New Event", style: TextStyle(color: AppColors.primaryNavy, fontSize: 12, fontWeight: FontWeight.w600)),
+                      icon: const Icon(Icons.add_circle_outline, size: 15, color: AppColors.primaryNavy),
+                      label: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text("New Event", style: TextStyle(color: AppColors.primaryNavy, fontSize: 11.5, fontWeight: FontWeight.w600)),
+                      ),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppColors.borderSubtle),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                         backgroundColor: AppColors.white,
                       ),
                     ),
@@ -247,12 +274,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onPressed: () {
                         widget.onTabChange?.call(3); // Navigate to Distribution Tab
                       },
-                      icon: const Icon(Icons.playlist_add_check, size: 16, color: AppColors.statusDistributed),
-                      label: const Text("Distribute", style: TextStyle(color: AppColors.primaryNavy, fontSize: 12, fontWeight: FontWeight.w600)),
+                      icon: const Icon(Icons.playlist_add_check, size: 15, color: AppColors.statusDistributed),
+                      label: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text("Distribute", style: TextStyle(color: AppColors.primaryNavy, fontSize: 11.5, fontWeight: FontWeight.w600)),
+                      ),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppColors.borderSubtle),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                         backgroundColor: AppColors.white,
                       ),
                     ),
@@ -335,7 +365,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color: AppColors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: AppColors.borderSubtle),
-                    ],
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

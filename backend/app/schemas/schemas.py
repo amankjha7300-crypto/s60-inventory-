@@ -126,6 +126,23 @@ class InventoryItemCreate(BaseModel):
     unit: str = "units"
     description: Optional[str] = None
     default_sku: Optional[str] = None
+    initial_stock: Optional[int] = 0
+    created_source: Optional[str] = "MASTER"
+    image_url: Optional[str] = None
+
+class InventoryItemUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[str] = None
+    unit: Optional[str] = None
+    description: Optional[str] = None
+    initial_stock: Optional[int] = None
+    image_url: Optional[str] = None
+
+class MasterItemDistributeRequest(BaseModel):
+    event_id: Optional[int] = None
+    student_id: int
+    quantity: int = 1
+    remarks: Optional[str] = None
 
 class InventoryItemResponse(BaseModel):
     id: int
@@ -134,23 +151,31 @@ class InventoryItemResponse(BaseModel):
     unit: str
     description: Optional[str] = None
     default_sku: Optional[str] = None
+    initial_stock: int = 0
+    created_source: str = "MASTER"
+    image_url: Optional[str] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
 
 class EventInventoryCreate(BaseModel):
-    inventory_item_id: int
+    inventory_item_id: Optional[int] = None
+    item_name: Optional[str] = None
+    category: Optional[str] = "Other"
+    unit: Optional[str] = "units"
     initial_quantity: int = Field(gt=0, description="Quantity must be greater than 0")
     eligibility_type: str = "ALL"  # ALL, SEMESTER, SELECTED, WINNERS
     semester_filter: Optional[int] = None
     low_stock_threshold: int = 10
+    image_url: Optional[str] = None
 
 class EventInventoryUpdate(BaseModel):
     initial_quantity: Optional[int] = None
     eligibility_type: Optional[str] = None
     semester_filter: Optional[int] = None
     low_stock_threshold: Optional[int] = None
+    image_url: Optional[str] = None
 
 class EventInventoryResponse(BaseModel):
     id: int
@@ -166,6 +191,7 @@ class EventInventoryResponse(BaseModel):
     semester_filter: Optional[int] = None
     low_stock_threshold: int
     status: str  # "Available", "Low Stock", "Out of Stock"
+    image_url: Optional[str] = None
 
 # --- Winner Schemas ---
 class WinnerCreate(BaseModel):
@@ -195,6 +221,8 @@ class EventCreate(BaseModel):
     academic_session_id: Optional[int] = None
     semester_scheme: str = "ODD"
     applicable_semesters: List[int] = [3, 5, 7]
+    custom_audience: Optional[str] = None
+    image_url: Optional[str] = None
     status: str = "Upcoming"
     initial_items: Optional[List[EventInventoryCreate]] = None
 
@@ -207,6 +235,8 @@ class EventUpdate(BaseModel):
     venue: Optional[str] = None
     status: Optional[str] = None
     applicable_semesters: Optional[List[int]] = None
+    custom_audience: Optional[str] = None
+    image_url: Optional[str] = None
 
 class EventListItemResponse(BaseModel):
     id: int
@@ -219,6 +249,8 @@ class EventListItemResponse(BaseModel):
     status: str
     semester_scheme: str
     applicable_semesters: List[int]
+    custom_audience: Optional[str] = None
+    image_url: Optional[str] = None
     total_participants: int
     total_inventory_items: int
     total_quantity: int
@@ -239,6 +271,8 @@ class EventDetailResponse(BaseModel):
     academic_session_name: Optional[str] = None
     semester_scheme: str
     applicable_semesters: List[int]
+    custom_audience: Optional[str] = None
+    image_url: Optional[str] = None
     inventories: List[EventInventoryResponse]
     winners: List[WinnerResponse]
     participants_count: int
@@ -253,6 +287,12 @@ class DistributionSaveItem(BaseModel):
     event_inventory_id: int
     quantity: int = 1
     remarks: Optional[str] = None
+
+class DistributionRemarkRequest(BaseModel):
+    event_id: int
+    student_id: int
+    event_inventory_id: int
+    remarks: Optional[str] = ""
 
 class BatchDistributionRequest(BaseModel):
     event_id: int
@@ -325,3 +365,9 @@ class DashboardOverview(BaseModel):
     recent_events: List[EventListItemResponse]
     low_stock_alerts: List[Dict[str, Any]]
     recent_distributions: List[DistributionRecordResponse]
+
+class SaveReportDiskRequest(BaseModel):
+    filename: str
+    content: str
+    is_base64: Optional[bool] = False
+

@@ -102,6 +102,8 @@ class EventListItemModel {
   final String status;
   final String semesterScheme;
   final List<int> applicableSemesters;
+  final String? customAudience;
+  final String? imageUrl;
   final int totalParticipants;
   final int totalInventoryItems;
   final int totalQuantity;
@@ -120,6 +122,8 @@ class EventListItemModel {
     required this.status,
     required this.semesterScheme,
     required this.applicableSemesters,
+    this.customAudience,
+    this.imageUrl,
     required this.totalParticipants,
     required this.totalInventoryItems,
     required this.totalQuantity,
@@ -140,6 +144,8 @@ class EventListItemModel {
       status: json['status'] ?? 'Upcoming',
       semesterScheme: json['semester_scheme'] ?? 'ODD',
       applicableSemesters: (json['applicable_semesters'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [3, 5, 7],
+      customAudience: json['custom_audience'],
+      imageUrl: json['image_url'],
       totalParticipants: json['total_participants'] ?? 0,
       totalInventoryItems: json['total_inventory_items'] ?? 0,
       totalQuantity: json['total_quantity'] ?? 0,

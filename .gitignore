@@ -32,3 +32,13 @@ ENV/
 *~
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Executables & Binaries
+dist/
+build/
+*.exe
+*.apk
+*.log
+err.txt
+out.txt

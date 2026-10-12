@@ -1,4 +1,4 @@
-package in.ac.sviet.super60.inventory
+package `in`.ac.sviet.super60.inventory
 
 import io.flutter.embedding.android.FlutterActivity
 

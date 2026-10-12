@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import Optional, List
@@ -21,19 +21,19 @@ def list_students(
     semester: Optional[int] = Query(None, description="Filter by semester (3,4,5,6,7,8)"),
     status: Optional[str] = Query("ACTIVE", description="ACTIVE, INACTIVE, ALL"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_db),
     admin: Admin = Depends(get_current_admin)
 ):
     query = db.query(Student)
 
-    if status and status.upper() != "ALL":
+    if status and isinstance(status, str) and status.upper() != "ALL":
         query = query.filter(Student.status == status.upper())
 
-    if semester:
+    if semester and isinstance(semester, int):
         query = query.filter(Student.current_semester == semester)
 
-    if search:
+    if search and isinstance(search, str):
         s = f"%{search.strip()}%"
         query = query.filter(
             or_(
@@ -45,7 +45,7 @@ def list_students(
         )
 
     total_count = query.count()
-    students = query.order_by(Student.student_id.asc()).offset((page - 1) * page_size).limit(page_size).all()
+    students = query.order_by(Student.id.asc()).offset((page - 1) * page_size).limit(page_size).all()
 
     items = [
         {

@@ -24,8 +24,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "in.ac.sviet.super60.inventory"
-    compileSdkVersion 34
-    ndkVersion flutter.ndkVersion
+    compileSdkVersion flutter.compileSdkVersion
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -42,8 +41,8 @@ android {
 
     defaultConfig {
         applicationId "in.ac.sviet.super60.inventory"
-        minSdkVersion 21
-        targetSdkVersion 34
+        minSdkVersion flutter.minSdkVersion
+        targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }

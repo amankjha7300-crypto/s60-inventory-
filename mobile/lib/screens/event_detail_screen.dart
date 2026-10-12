@@ -45,83 +45,368 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
   }
 
   void _showAddInventoryDialog() async {
-    final masterItems = await _api.getMasterInventory();
-    if (!mounted || masterItems.isEmpty) return;
+    List<dynamic> masterItems = [];
+    try {
+      masterItems = await _api.getMasterInventory();
+    } catch (_) {
+      masterItems = [];
+    }
+    if (!mounted) return;
 
-    int selectedMasterId = masterItems[0]['id'];
+    bool isCustom = masterItems.isEmpty;
+    int? selectedMasterId = masterItems.isNotEmpty ? masterItems[0]['id'] : null;
+    final customNameCtrl = TextEditingController();
+    final customCategoryCtrl = TextEditingController(text: 'Apparel');
+    final customUnitCtrl = TextEditingController(text: 'units');
     final qtyController = TextEditingController(text: '60');
     String eligibility = 'ALL';
+    bool isSubmitting = false;
+
+    final categories = ['Apparel', 'Stationery', 'Certificate', 'Award', 'Gift', 'Kit', 'Electronics', 'Prize', 'Other'];
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add Event Inventory', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Add Event Item', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, fontFamily: 'Poppins', color: AppColors.primaryNavy)),
+              IconButton(
+                icon: const Icon(Icons.close, size: 20),
+                onPressed: () => Navigator.pop(ctx),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Select Item Catalog', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<int>(
-                  value: selectedMasterId,
-                  items: masterItems.map<DropdownMenuItem<int>>((item) {
-                    return DropdownMenuItem<int>(
-                      value: item['id'],
-                      child: Text("${item['name']} (${item['category']})"),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) setDialogState(() => selectedMasterId = val);
-                  },
+                // Mode Switcher: Catalog vs Custom
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryNavy.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            if (masterItems.isNotEmpty) {
+                              setDialogState(() => isCustom = false);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: !isCustom ? AppColors.white : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: !isCustom
+                                  ? [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4, offset: const Offset(0, 2))]
+                                  : [],
+                            ),
+                            child: Center(
+                              child: Text(
+                                "From Catalog",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: !isCustom ? FontWeight.bold : FontWeight.w500,
+                                  color: !isCustom ? AppColors.primaryNavy : AppColors.textGray,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setDialogState(() => isCustom = true),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isCustom ? AppColors.white : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: isCustom
+                                  ? [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4, offset: const Offset(0, 2))]
+                                  : [],
+                            ),
+                            child: Center(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add, size: 14, color: isCustom ? AppColors.primaryOrange : AppColors.textGray),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "Custom Item",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: isCustom ? FontWeight.bold : FontWeight.w500,
+                                      color: isCustom ? AppColors.primaryOrange : AppColors.textGray,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
-                const Text('Quantity', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: qtyController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(hintText: '60'),
-                ),
-                const SizedBox(height: 16),
-                const Text('Eligibility Rule', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  value: eligibility,
-                  items: const [
-                    DropdownMenuItem(value: 'ALL', child: Text('All Eligible Students')),
-                    DropdownMenuItem(value: 'WINNERS', child: Text('Winners Only')),
-                    DropdownMenuItem(value: 'SELECTED', child: Text('Selected Students')),
+
+                if (!isCustom && masterItems.isNotEmpty) ...[
+                  const Text('Select Catalog Item', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryNavy)),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<int>(
+                    value: selectedMasterId,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    items: masterItems.map<DropdownMenuItem<int>>((item) {
+                      return DropdownMenuItem<int>(
+                        value: item['id'],
+                        child: Text(
+                          "${item['name']} (${item['category']})",
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setDialogState(() => selectedMasterId = val);
+                    },
+                  ),
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                      onPressed: () => setDialogState(() => isCustom = true),
+                      icon: const Icon(Icons.add_circle_outline, size: 14, color: AppColors.primaryOrange),
+                      label: const Text("+ Create new custom item", style: TextStyle(fontSize: 11, color: AppColors.primaryOrange, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ] else ...[
+                  const Text('Item Name *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryNavy)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: customNameCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Smart Watch, Custom Hoodie, Trophy',
+                      hintStyle: const TextStyle(fontSize: 12),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Category', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryNavy)),
+                            const SizedBox(height: 6),
+                            DropdownButtonFormField<String>(
+                              value: customCategoryCtrl.text,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12)))).toList(),
+                              onChanged: (val) {
+                                if (val != null) customCategoryCtrl.text = val;
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Unit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryNavy)),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: customUnitCtrl,
+                              decoration: InputDecoration(
+                                hintText: 'units / pcs',
+                                hintStyle: const TextStyle(fontSize: 12),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Quantity *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryNavy)),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: qtyController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              hintText: '60',
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Eligibility Rule', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryNavy)),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<String>(
+                            value: eligibility,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 'ALL', child: Text('All Students', style: TextStyle(fontSize: 12))),
+                              DropdownMenuItem(value: 'WINNERS', child: Text('Winners Only', style: TextStyle(fontSize: 12))),
+                              DropdownMenuItem(value: 'SELECTED', child: Text('Selected', style: TextStyle(fontSize: 12))),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) setDialogState(() => eligibility = val);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
-                  onChanged: (val) {
-                    if (val != null) setDialogState(() => eligibility = val);
-                  },
                 ),
               ],
             ),
           ),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textGray)),
+            ),
             ElevatedButton(
-              onPressed: () async {
-                final qty = int.tryParse(qtyController.text) ?? 0;
-                if (qty <= 0) return;
-                try {
-                  await _api.addEventInventory(widget.eventId, {
-                    'inventory_item_id': selectedMasterId,
-                    'initial_quantity': qty,
-                    'eligibility_type': eligibility,
-                  });
-                  if (mounted) {
-                    Navigator.pop(ctx);
-                    _loadEvent();
-                  }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                }
-              },
-              child: const Text('Add Item'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryOrange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final qty = int.tryParse(qtyController.text.trim()) ?? 0;
+                      if (qty <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter a valid quantity greater than 0')),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isSubmitting = true);
+
+                      try {
+                        int targetItemId;
+                        if (isCustom) {
+                          final name = customNameCtrl.text.trim();
+                          if (name.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please enter an item name')),
+                            );
+                            setDialogState(() => isSubmitting = false);
+                            return;
+                          }
+
+                          // Check if item already exists in master catalog
+                          final existing = masterItems.firstWhere(
+                            (it) => it['name'].toString().toLowerCase() == name.toLowerCase(),
+                            orElse: () => null,
+                          );
+
+                          if (existing != null) {
+                            targetItemId = existing['id'];
+                          } else {
+                            // Create new master catalog item
+                            final newItem = await _api.createMasterInventory({
+                              'name': name,
+                              'category': customCategoryCtrl.text.trim().isNotEmpty ? customCategoryCtrl.text.trim() : 'Other',
+                              'unit': customUnitCtrl.text.trim().isNotEmpty ? customUnitCtrl.text.trim() : 'units',
+                              'description': 'Created for event',
+                            });
+                            targetItemId = newItem['id'];
+                          }
+                        } else {
+                          if (selectedMasterId == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please select an item from the catalog')),
+                            );
+                            setDialogState(() => isSubmitting = false);
+                            return;
+                          }
+                          targetItemId = selectedMasterId!;
+                        }
+
+                        // Allocate to the event
+                        await _api.addEventInventory(widget.eventId, {
+                          'inventory_item_id': targetItemId,
+                          'initial_quantity': qty,
+                          'eligibility_type': eligibility,
+                        });
+
+                        if (mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              backgroundColor: AppColors.statusDistributed,
+                              content: Text('Item successfully added to event!'),
+                            ),
+                          );
+                          _loadEvent();
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          setDialogState(() => isSubmitting = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: AppColors.statusOutOfStock,
+                              content: Text(e.toString().replaceAll('Exception: ', '')),
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Add Item', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -245,7 +530,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
                     color: AppColors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.borderSubtle),
-                  ],
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -310,7 +595,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
                     color: AppColors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.borderSubtle),
-                  ],
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -362,7 +647,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
                       color: AppColors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: AppColors.borderSubtle),
-                    ],
+                    ),
                     child: Row(
                       children: [
                         Container(

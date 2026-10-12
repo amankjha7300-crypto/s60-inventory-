@@ -3,6 +3,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc
 from typing import Optional, List, Dict, Any
 import datetime
+import os
+import sys
+import uuid
 
 from app.database.session import get_db
 from app.models.all_models import (
@@ -19,8 +22,21 @@ from app.api.deps import get_current_admin
 router = APIRouter(prefix="/events", tags=["Events & Saved Events"])
 
 def generate_event_uid(db: Session) -> str:
-    count = db.query(Event).count() + 1
-    return f"S60-EVT-{count:04d}"
+    import re
+    existing_uids = [row[0] for row in db.query(Event.event_uid).all() if row[0]]
+    max_num = 0
+    for uid in existing_uids:
+        m = re.search(r"(\d+)$", str(uid))
+        if m:
+            val = int(m.group(1))
+            if val > max_num:
+                max_num = val
+    next_num = max_num + 1
+    candidate = f"S60-EVT-{next_num:04d}"
+    while candidate in existing_uids:
+        next_num += 1
+        candidate = f"S60-EVT-{next_num:04d}"
+    return candidate
 
 def compute_stock_status(remaining: int, initial: int, threshold: int) -> str:
     if remaining <= 0:
@@ -102,6 +118,8 @@ def list_saved_events(
             "status": ev.status,
             "semester_scheme": ev.semester_scheme,
             "applicable_semesters": sem_list,
+            "custom_audience": ev.custom_audience,
+            "image_url": ev.image_url,
             "total_participants": participants_count,
             "total_inventory_items": total_items,
             "total_quantity": total_qty,
@@ -148,12 +166,28 @@ def create_event(
         academic_session_id=session_id,
         semester_scheme=scheme,
         applicable_semesters=sem_str,
+        custom_audience=data.custom_audience.strip() if data.custom_audience else None,
+        image_url=data.image_url.strip() if data.image_url else None,
         status=data.status or "Upcoming",
         created_by_id=admin.id
     )
-    db.add(event)
-    db.commit()
-    db.refresh(event)
+
+    committed = False
+    for attempt in range(5):
+        try:
+            event.event_uid = generate_event_uid(db)
+            db.add(event)
+            db.commit()
+            db.refresh(event)
+            committed = True
+            break
+        except Exception as e:
+            db.rollback()
+            if attempt == 4:
+                raise HTTPException(status_code=500, detail=f"Failed to save event: {str(e)}")
+
+    if not committed:
+        raise HTTPException(status_code=500, detail="Could not assign unique event UID.")
 
     # Automatically add eligible students as participants based on applicable semesters
     sem_ints = [int(x) for x in sem_str.split(",") if x.isdigit()]
@@ -238,6 +272,7 @@ def get_event_detail(
             "eligibility_type": inv.eligibility_type,
             "semester_filter": inv.semester_filter,
             "low_stock_threshold": inv.low_stock_threshold,
+            "image_url": inv.image_url or (master_item.image_url if master_item else None),
             "status": status_label
         })
 
@@ -275,6 +310,8 @@ def get_event_detail(
             "academic_session_name": event.academic_session.session_name if event.academic_session else "2026-27",
             "semester_scheme": event.semester_scheme,
             "applicable_semesters": sem_list,
+            "custom_audience": event.custom_audience,
+            "image_url": event.image_url,
             "inventories": inv_list,
             "winners": winners_list,
             "participants_count": len(event.participants),
@@ -312,6 +349,10 @@ def update_event(
         event.status = data.status.strip()
     if data.applicable_semesters is not None:
         event.applicable_semesters = ",".join(str(s) for s in data.applicable_semesters)
+    if data.custom_audience is not None:
+        event.custom_audience = data.custom_audience.strip() if data.custom_audience else None
+    if data.image_url is not None:
+        event.image_url = data.image_url.strip() if data.image_url else None
 
     db.commit()
     db.refresh(event)
@@ -353,8 +394,123 @@ def archive_event(
 
     return ApiResponse(success=True, message=f"Event '{event.name}' archived. Historical records remain fully intact.")
 
-@router.delete("/{event_id}", response_model=ApiResponse)
-def delete_event(
+@router.post("/{event_id}/complete", response_model=ApiResponse)
+def complete_event(
+    event_id: int,
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(get_current_admin)
+):
+    """
+    CRITICAL REQUIREMENT:
+    Complete Event action.
+    Validates that EVERY eligible student has either:
+      1. Received their allocated item (DISTRIBUTED), OR
+      2. Has an updated remark explaining why they did not receive it.
+    If ANY eligible student remains pending without a remark, completing the event is blocked.
+    If all are accounted for, updates the event status to 'Completed'.
+    """
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found.")
+
+    if event.status == "Completed":
+        return ApiResponse(
+            success=True,
+            message=f"Event '{event.name}' is already marked as Completed.",
+            data={"event_id": event.id, "status": "Completed"}
+        )
+
+    event_inventories = db.query(EventInventory).filter(EventInventory.event_id == event_id).all()
+    if not event_inventories:
+        event.status = "Completed"
+        db.commit()
+        return ApiResponse(
+            success=True,
+            message=f"Event '{event.name}' marked as Completed.",
+            data={"event_id": event.id, "status": "Completed"}
+        )
+
+    winners = db.query(Winner).filter(Winner.event_id == event_id).all()
+    winner_set = {w.student_id for w in winners}
+
+    sem_list = [int(x.strip()) for x in event.applicable_semesters.split(",") if x.strip().isdigit()]
+
+    # Query active students in applicable semesters
+    students = db.query(Student).filter(
+        Student.status == "ACTIVE",
+        Student.current_semester.in_(sem_list)
+    ).all()
+
+    # Query all distribution records for this event
+    existing_dists = db.query(Distribution).filter(Distribution.event_id == event_id).all()
+    dist_map = {}
+    for d in existing_dists:
+        prev = dist_map.get((d.student_id, d.event_inventory_id))
+        if not prev or d.status == "DISTRIBUTED" or prev.status != "DISTRIBUTED":
+            dist_map[(d.student_id, d.event_inventory_id)] = d
+
+    unaccounted_items = []
+    for st in students:
+        is_winner = st.id in winner_set
+        for inv in event_inventories:
+            eligible = False
+            if inv.eligibility_type == "ALL":
+                eligible = True
+            elif inv.eligibility_type == "SEMESTER":
+                eligible = (inv.semester_filter is None or st.current_semester == inv.semester_filter)
+            elif inv.eligibility_type == "WINNERS":
+                eligible = is_winner
+            elif inv.eligibility_type == "SELECTED":
+                eligible = True
+
+            if not eligible:
+                continue
+
+            dist_rec = dist_map.get((st.id, inv.id))
+            is_distributed = (dist_rec is not None and dist_rec.status == "DISTRIBUTED")
+            has_remark = (dist_rec is not None and bool((dist_rec.remarks or "").strip()))
+
+            if not is_distributed and not has_remark:
+                item_name = inv.inventory_item.name if inv.inventory_item else "Item"
+                unaccounted_items.append(f"{st.name} ({st.roll_number}) - {item_name}")
+
+    if unaccounted_items:
+        sample_str = ", ".join(unaccounted_items[:3])
+        more = f" and {len(unaccounted_items) - 3} more" if len(unaccounted_items) > 3 else ""
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Cannot complete event! {len(unaccounted_items)} pending student item(s) are unaccounted for "
+                f"({sample_str}{more}). Please distribute the items or add a remark and click Update for each "
+                f"pending student before completing the event."
+            )
+        )
+
+    # All eligible students are accounted for!
+    old_status = event.status
+    event.status = "Completed"
+
+    audit = AuditLog(
+        admin_id=admin.id,
+        admin_name=admin.full_name,
+        action="COMPLETE_EVENT",
+        entity_type="Event",
+        entity_id=event.event_uid,
+        old_data=f"Status: {old_status}",
+        new_data=f"Status: Completed (All {len(students)} eligible students distributed or remarked)"
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(event)
+
+    return ApiResponse(
+        success=True,
+        message=f"Event '{event.name}' ({event.event_uid}) has been successfully marked as Completed!",
+        data={"event_id": event.id, "status": "Completed"}
+    )
+
+@router.post("/{event_id}/reopen", response_model=ApiResponse)
+def reopen_event(
     event_id: int,
     db: Session = Depends(get_db),
     admin: Admin = Depends(get_current_admin)
@@ -363,18 +519,98 @@ def delete_event(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found.")
 
+    old_status = event.status
+    event.status = "Ongoing"
+
+    audit = AuditLog(
+        admin_id=admin.id,
+        admin_name=admin.full_name,
+        action="REOPEN_EVENT",
+        entity_type="Event",
+        entity_id=event.event_uid,
+        old_data=f"Status: {old_status}",
+        new_data="Status: Ongoing"
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(event)
+
+    return ApiResponse(
+        success=True,
+        message=f"Event '{event.name}' reopened to Ongoing status.",
+        data={"event_id": event.id, "status": "Ongoing"}
+    )
+
+@router.delete("/{event_id}", response_model=ApiResponse)
+def delete_event(
+    event_id: int,
+    force: bool = Query(False),
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(get_current_admin)
+):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found.")
+
     dist_count = db.query(Distribution).filter(Distribution.event_id == event.id).count()
-    if dist_count > 0:
+    if dist_count > 0 and not force:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot delete '{event.name}' because {dist_count} reward distributions are recorded. Use 'Archive' to preserve history."
+            detail=f"Cannot delete '{event.name}' because {dist_count} reward distributions are recorded. Confirm force delete to permanently remove it."
         )
 
+    # Collect associated inventory items before deleting event_inventory
+    ev_inventories = db.query(EventInventory).filter(EventInventory.event_id == event.id).all()
+    inventory_item_ids = [ei.inventory_item_id for ei in ev_inventories]
+
+    # Clean up associated child records
+    db.query(Distribution).filter(Distribution.event_id == event.id).delete()
+    db.query(Winner).filter(Winner.event_id == event.id).delete()
+    db.query(EventParticipant).filter(EventParticipant.event_id == event.id).delete()
+    db.query(EventInventory).filter(EventInventory.event_id == event.id).delete()
+
+    # Clean up event-created inventory items or items that only belonged to this event
+    deleted_items_count = 0
+    for it_id in inventory_item_ids:
+        it = db.query(InventoryItem).filter(InventoryItem.id == it_id).first()
+        if not it:
+            continue
+        # Check if used in other events
+        other_events_count = db.query(EventInventory).filter(
+            EventInventory.inventory_item_id == it_id
+        ).count()
+        # Check if linked to any distributions
+        dist_records_count = db.query(Distribution).join(
+            EventInventory, Distribution.event_inventory_id == EventInventory.id
+        ).filter(EventInventory.inventory_item_id == it_id).count()
+
+        desc_lower = (it.description or "").lower()
+        is_event_item = (
+            getattr(it, "created_source", "MASTER") == "EVENT"
+            or "event allocation" in desc_lower
+            or "created for event" in desc_lower
+        )
+
+        if other_events_count == 0 and dist_records_count == 0 and (is_event_item or (it.initial_stock or 0) == 0):
+            db.delete(it)
+            deleted_items_count += 1
+
+    event_name = event.name
     uid = event.event_uid
     db.delete(event)
+
+    audit = AuditLog(
+        admin_id=admin.id,
+        admin_name=admin.full_name,
+        action="DELETE_EVENT",
+        entity_type="Event",
+        entity_id=str(event_id),
+        new_data=f"Deleted event '{event_name}' ({uid}) and cleaned up {deleted_items_count} event inventory items"
+    )
+    db.add(audit)
     db.commit()
 
-    return ApiResponse(success=True, message=f"Event '{uid}' removed.")
+    return ApiResponse(success=True, message=f"Event '{event_name}' ({uid}) and its inventory records deleted successfully.")
 
 # --- Event Inventory Management ---
 @router.post("/{event_id}/inventory", response_model=ApiResponse)
@@ -388,13 +624,33 @@ def add_event_inventory(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found.")
 
-    item = db.query(InventoryItem).filter(InventoryItem.id == data.inventory_item_id).first()
+    item = None
+    if data.inventory_item_id:
+        item = db.query(InventoryItem).filter(InventoryItem.id == data.inventory_item_id).first()
+    elif data.item_name and data.item_name.strip():
+        name_clean = data.item_name.strip()
+        item = db.query(InventoryItem).filter(InventoryItem.name.ilike(name_clean)).first()
+        if not item:
+            item = InventoryItem(
+                name=name_clean,
+                category=(data.category or "Other").strip(),
+                unit=(data.unit or "units").strip(),
+                created_source="EVENT",
+                image_url=data.image_url
+            )
+            db.add(item)
+            db.commit()
+            db.refresh(item)
+        elif data.image_url and not item.image_url:
+            item.image_url = data.image_url
+            db.commit()
+
     if not item:
-        raise HTTPException(status_code=404, detail="Inventory catalog item not found.")
+        raise HTTPException(status_code=400, detail="Inventory item ID or valid item name is required.")
 
     existing = db.query(EventInventory).filter(
         EventInventory.event_id == event_id,
-        EventInventory.inventory_item_id == data.inventory_item_id
+        EventInventory.inventory_item_id == item.id
     ).first()
 
     if existing:
@@ -402,13 +658,14 @@ def add_event_inventory(
 
     ev_inv = EventInventory(
         event_id=event_id,
-        inventory_item_id=data.inventory_item_id,
+        inventory_item_id=item.id,
         initial_quantity=data.initial_quantity,
         distributed_quantity=0,
         remaining_quantity=data.initial_quantity,
         eligibility_type=data.eligibility_type.upper(),
         semester_filter=data.semester_filter,
-        low_stock_threshold=data.low_stock_threshold
+        low_stock_threshold=data.low_stock_threshold,
+        image_url=data.image_url or (item.image_url if item else None)
     )
     db.add(ev_inv)
     db.commit()
@@ -494,9 +751,30 @@ def remove_event_inventory(
             detail=f"Cannot remove item because {ev_inv.distributed_quantity} units have already been distributed to students."
         )
 
+    item_id = ev_inv.inventory_item_id
+    item_name = ev_inv.inventory_item.name if ev_inv.inventory_item else "Item"
+
     db.delete(ev_inv)
+    db.flush()
+
+    # Check if inventory item was created for event and should be cleaned up
+    it = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+    if it:
+        other_events = db.query(EventInventory).filter(EventInventory.inventory_item_id == item_id).count()
+        dist_records = db.query(Distribution).join(
+            EventInventory, Distribution.event_inventory_id == EventInventory.id
+        ).filter(EventInventory.inventory_item_id == item_id).count()
+        desc_lower = (it.description or "").lower()
+        is_event_item = (
+            getattr(it, "created_source", "MASTER") == "EVENT"
+            or "event allocation" in desc_lower
+            or "created for event" in desc_lower
+        )
+        if other_events == 0 and dist_records == 0 and (is_event_item or (it.initial_stock or 0) == 0):
+            db.delete(it)
+
     db.commit()
-    return ApiResponse(success=True, message="Inventory item removed from event.")
+    return ApiResponse(success=True, message=f"Inventory item '{item_name}' removed from event.")
 
 # --- Winner Management ---
 @router.post("/{event_id}/winners", response_model=ApiResponse)

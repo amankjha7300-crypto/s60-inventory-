@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
@@ -321,9 +322,36 @@ class _SavedEventsScreenState extends State<SavedEventsScreen> {
                                             "${ev.totalInventoryItems} Item Types",
                                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primaryNavy),
                                           ),
-                                          Text(
-                                            "Distribution: ${ev.distributedQuantity} / ${ev.totalQuantity} items",
-                                            style: const TextStyle(fontSize: 12, color: AppColors.textGray),
+                                          Row(
+                                            children: [
+                                              if (ev.imageUrl != null && ev.imageUrl!.isNotEmpty)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(right: 6),
+                                                  child: InkWell(
+                                                    onTap: () => _showPhotoDialog(context, ev),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: AppColors.primaryOrange.withOpacity(0.12),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                        border: Border.all(color: AppColors.primaryOrange.withOpacity(0.3)),
+                                                      ),
+                                                      child: const Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Icon(Icons.camera_alt, size: 11, color: AppColors.primaryOrange),
+                                                          SizedBox(width: 3),
+                                                          Text('Photo', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryOrange)),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              Text(
+                                                "Distribution: ${ev.distributedQuantity} / ${ev.totalQuantity} items",
+                                                style: const TextStyle(fontSize: 12, color: AppColors.textGray),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),
@@ -365,6 +393,65 @@ class _SavedEventsScreenState extends State<SavedEventsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showPhotoDialog(BuildContext context, dynamic ev) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        Widget imageWidget;
+        final raw = (ev.imageUrl as String? ?? '').trim();
+        if (raw.startsWith('data:image')) {
+          final commaIdx = raw.indexOf(',');
+          final b64 = commaIdx != -1 ? raw.substring(commaIdx + 1) : raw;
+          try {
+            imageWidget = Image.memory(base64Decode(b64), fit: BoxFit.contain);
+          } catch (_) {
+            imageWidget = const Center(child: Text('Invalid image data'));
+          }
+        } else if (raw.startsWith('http')) {
+          imageWidget = Image.network(raw, fit: BoxFit.contain);
+        } else {
+          imageWidget = const Center(child: Text('No photo uploaded'));
+        }
+
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        ev.name ?? 'Event Photo',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryNavy),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: Container(
+                  constraints: const BoxConstraints(maxHeight: 400),
+                  color: Colors.black12,
+                  child: imageWidget,
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
     );
   }
 }

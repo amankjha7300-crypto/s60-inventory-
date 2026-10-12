@@ -16,10 +16,12 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final _dateController = TextEditingController(text: '15 Oct 2026');
   final _timeController = TextEditingController(text: '10:00 AM');
   final _venueController = TextEditingController(text: 'SVIET Seminar Hall');
+  final _guestController = TextEditingController();
 
   String _eventType = 'Workshop';
   String _scheme = 'ODD';
   final List<int> _selectedSemesters = [3, 5, 7];
+  bool _isCustomGuest = false;
   bool _isSaving = false;
 
   final List<String> _eventTypes = [
@@ -41,6 +43,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     _dateController.dispose();
     _timeController.dispose();
     _venueController.dispose();
+    _guestController.dispose();
     super.dispose();
   }
 
@@ -59,9 +62,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedSemesters.isEmpty) {
+    if (_selectedSemesters.isEmpty && !_isCustomGuest) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one applicable semester.')),
+        const SnackBar(content: Text('Please select at least one applicable semester or Custom Guest.')),
       );
       return;
     }
@@ -78,6 +81,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         'venue': _venueController.text.trim(),
         'semester_scheme': _scheme,
         'applicable_semesters': _selectedSemesters,
+        'custom_audience': _isCustomGuest ? (_guestController.text.trim().isNotEmpty ? _guestController.text.trim() : 'Custom Guest') : null,
         'status': 'Upcoming',
       });
 
@@ -236,23 +240,48 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
-                      children: availableSemesters.map((sem) {
-                        final isSelected = _selectedSemesters.contains(sem);
-                        return FilterChip(
-                          label: Text('${sem}th Semester'),
-                          selected: isSelected,
+                      runSpacing: 8,
+                      children: [
+                        ...availableSemesters.map((sem) {
+                          final isSelected = _selectedSemesters.contains(sem);
+                          return FilterChip(
+                            label: Text('${sem}th Semester'),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              setState(() {
+                                if (selected) {
+                                  _selectedSemesters.add(sem);
+                                } else {
+                                  _selectedSemesters.remove(sem);
+                                }
+                              });
+                            },
+                          );
+                        }),
+                        FilterChip(
+                          label: const Text('Custom Guest (Non-S60)'),
+                          selected: _isCustomGuest,
+                          selectedColor: AppColors.primaryOrange.withOpacity(0.18),
+                          checkmarkColor: AppColors.primaryOrange,
                           onSelected: (selected) {
                             setState(() {
-                              if (selected) {
-                                _selectedSemesters.add(sem);
-                              } else {
-                                _selectedSemesters.remove(sem);
-                              }
+                              _isCustomGuest = selected;
                             });
                           },
-                        );
-                      }).toList(),
+                        ),
+                      ],
                     ),
+                    if (_isCustomGuest) ...[
+                      const SizedBox(height: 12),
+                      const Text('Custom Guest / Non-S60 Details (Optional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.primaryOrange)),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _guestController,
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. Chief Guest, External Judge, Special Attendee...',
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
