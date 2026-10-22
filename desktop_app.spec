@@ -6,11 +6,12 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 block_cipher = None
 
-# Bundle web portal, assets, and backend modules
+# Bundle web portal, assets, backend modules, and cloud config
 datas = [
     ('web', 'web'),
     ('assets', 'assets'),
     ('backend', 'backend'),
+    ('s60_config.json', '.'),
 ]
 
 # Hidden imports required by dynamic ASGI / FastAPI / SQLAlchemy / PyWebView

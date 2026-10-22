@@ -87,6 +87,9 @@
         <button id="authTabSignUp" type="button" onclick="switchAuthTab('signup')" style="flex: 1; padding: 10px; border: none; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; background: transparent; color: var(--text-gray); transition: all 0.2s;">
           <i class="fa-solid fa-user-plus"></i> Create Account
         </button>
+        <button id="authTabReset" type="button" onclick="switchAuthTab('reset')" style="flex: 1; padding: 10px; border: none; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; background: transparent; color: var(--text-gray); transition: all 0.2s;">
+          <i class="fa-solid fa-key"></i> Reset Key
+        </button>
       </div>
 
       <!-- PANEL 1: SIGN IN -->
@@ -99,9 +102,12 @@
             <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">Email or Username</label>
             <input type="text" id="loginEmail" placeholder="Enter email or username" required style="margin-top: 6px;">
           </div>
-          <div style="margin-bottom: 20px;">
+          <div style="margin-bottom: 10px;">
             <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">Password</label>
             <input type="password" id="loginPassword" placeholder="••••••••" required style="margin-top: 6px;">
+          </div>
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 18px;">
+            <a href="javascript:void(0)" onclick="switchAuthTab('reset')" style="font-size: 12px; color: var(--primary-orange); text-decoration: none; font-weight: 600; cursor: pointer;">Forgot password?</a>
           </div>
           <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 14px;">
             Sign In <i class="fa-solid fa-arrow-right"></i>
@@ -154,6 +160,34 @@
 
         <p style="font-size: 11px; color: var(--text-gray); margin-top: 14px;">
           Already have an account? <a href="javascript:void(0)" onclick="switchAuthTab('signin')" style="color: var(--primary-orange); font-weight: bold; text-decoration: none;">Sign in here</a>
+        </p>
+      </div>
+
+      <!-- PANEL 3: RESET PASSWORD -->
+      <div id="authPanelReset" style="display: none;">
+        <h2 style="font-size: 20px; margin-bottom: 4px; color: var(--primary-navy);">Reset Password</h2>
+        <p style="font-size: 13px; color: var(--text-gray); margin-bottom: 18px;">Set a new password for your registered account</p>
+
+        <form id="resetForm" onsubmit="handleResetPassword(event)" style="text-align: left;">
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">Registered Email or Username *</label>
+            <input type="text" id="resetEmail" placeholder="e.g. amankjha7300@gmail.com" required style="margin-top: 6px;">
+          </div>
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">New Password *</label>
+            <input type="password" id="resetNewPassword" placeholder="Min 6 characters" required style="margin-top: 6px;">
+          </div>
+          <div style="margin-bottom: 20px;">
+            <label style="font-size: 12px; font-weight: 600; color: var(--primary-navy);">Confirm New Password *</label>
+            <input type="password" id="resetConfirmPassword" placeholder="Re-enter new password" required style="margin-top: 6px;">
+          </div>
+          <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 14px;">
+            <i class="fa-solid fa-key"></i> Update Password & Sign In
+          </button>
+        </form>
+
+        <p style="font-size: 11px; color: var(--text-gray); margin-top: 14px;">
+          Remembered password? <a href="javascript:void(0)" onclick="switchAuthTab('signin')" style="color: var(--primary-orange); font-weight: bold; text-decoration: none;">Sign in here</a>
         </p>
       </div>
 

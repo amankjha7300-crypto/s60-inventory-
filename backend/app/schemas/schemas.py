@@ -20,6 +20,14 @@ class SignUpRequest(BaseModel):
     role: str = "COORDINATOR"
     password: str
 
+class ResetPasswordRequest(BaseModel):
+    email: str
+    new_password: str
+
+class AdminResetPasswordRequest(BaseModel):
+    target_email: str
+    new_password: str
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

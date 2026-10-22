@@ -2,9 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.models.all_models import Admin, AuditLog
-from app.schemas.schemas import LoginRequest, SignUpRequest, TokenResponse, ApiResponse, AdminResponse
+from app.schemas.schemas import (
+    LoginRequest, SignUpRequest, TokenResponse, ApiResponse, AdminResponse,
+    ResetPasswordRequest, AdminResetPasswordRequest
+)
 from app.core.security import verify_password, create_access_token, get_password_hash
-from app.api.deps import get_current_admin
+from app.api.deps import get_current_admin, require_super_admin
 from pydantic import BaseModel
 import random
 
@@ -175,3 +178,109 @@ def change_password(
     db.commit()
 
     return ApiResponse(success=True, message="Password updated successfully.")
+
+@router.post("/reset-password", response_model=ApiResponse)
+def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
+    email = req.email.strip().lower()
+    if len(req.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
+
+    admin = db.query(Admin).filter(
+        (Admin.email.ilike(email)) | (Admin.username.ilike(email))
+    ).first()
+
+    if not admin:
+        raise HTTPException(status_code=404, detail=f"No account found with email or username '{email}'.")
+
+    admin.password_hash = get_password_hash(req.new_password)
+
+    audit = AuditLog(
+        admin_id=admin.id,
+        admin_name=admin.full_name,
+        action="RESET_PASSWORD",
+        entity_type="Admin",
+        entity_id=str(admin.id),
+        old_data=None,
+        new_data=f"Password reset for {admin.email}"
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(admin)
+
+    access_token = create_access_token(
+        data={"sub": str(admin.id), "email": admin.email, "role": admin.role}
+    )
+
+    admin_data = {
+        "id": admin.id,
+        "username": admin.username,
+        "email": admin.email,
+        "full_name": admin.full_name,
+        "role": admin.role
+    }
+
+    return ApiResponse(
+        success=True,
+        data={
+            "access_token": access_token,
+            "token_type": "bearer",
+            "admin": admin_data
+        },
+        message=f"Password updated successfully! Welcome back, {admin.full_name}."
+    )
+
+@router.get("/users", response_model=ApiResponse)
+def list_users(
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    users = db.query(Admin).order_by(Admin.id.asc()).all()
+    user_list = [
+        {
+            "id": u.id,
+            "username": u.username,
+            "email": u.email,
+            "full_name": u.full_name,
+            "role": u.role,
+            "is_active": u.is_active,
+            "created_at": u.created_at.isoformat() if u.created_at else None
+        }
+        for u in users
+    ]
+    return ApiResponse(
+        success=True,
+        data=user_list,
+        message="User list retrieved."
+    )
+
+@router.post("/admin/reset-password", response_model=ApiResponse)
+def admin_reset_password(
+    req: AdminResetPasswordRequest,
+    current_admin: Admin = Depends(require_super_admin),
+    db: Session = Depends(get_db)
+):
+    email = req.target_email.strip().lower()
+    if len(req.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
+
+    target = db.query(Admin).filter(
+        (Admin.email.ilike(email)) | (Admin.username.ilike(email))
+    ).first()
+    if not target:
+        raise HTTPException(status_code=404, detail=f"User '{email}' not found.")
+
+    target.password_hash = get_password_hash(req.new_password)
+    audit = AuditLog(
+        admin_id=current_admin.id,
+        admin_name=current_admin.full_name,
+        action="ADMIN_RESET_PASSWORD",
+        entity_type="Admin",
+        entity_id=str(target.id),
+        new_data=f"SuperAdmin reset password for {target.email}"
+    )
+    db.add(audit)
+    db.commit()
+    return ApiResponse(
+        success=True,
+        message=f"Successfully reset password for {target.full_name} ({target.email})."
+    )

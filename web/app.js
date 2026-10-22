@@ -50,29 +50,44 @@ function showSplash() {
 function switchAuthTab(tab) {
   const tabSignIn = document.getElementById('authTabSignIn');
   const tabSignUp = document.getElementById('authTabSignUp');
+  const tabReset = document.getElementById('authTabReset');
   const panelSignIn = document.getElementById('authPanelSignIn');
   const panelSignUp = document.getElementById('authPanelSignUp');
+  const panelReset = document.getElementById('authPanelReset');
+
+  // Reset all tabs
+  [tabSignIn, tabSignUp, tabReset].forEach(t => {
+    if (t) {
+      t.style.background = 'transparent';
+      t.style.color = 'var(--text-gray)';
+      t.style.boxShadow = 'none';
+    }
+  });
+  if (panelSignIn) panelSignIn.style.display = 'none';
+  if (panelSignUp) panelSignUp.style.display = 'none';
+  if (panelReset) panelReset.style.display = 'none';
 
   if (tab === 'signin') {
-    tabSignIn.style.background = 'var(--white)';
-    tabSignIn.style.color = 'var(--primary-navy)';
-    tabSignIn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
-    tabSignUp.style.background = 'transparent';
-    tabSignUp.style.color = 'var(--text-gray)';
-    tabSignUp.style.boxShadow = 'none';
-
-    panelSignIn.style.display = 'block';
-    panelSignUp.style.display = 'none';
-  } else {
-    tabSignUp.style.background = 'var(--white)';
-    tabSignUp.style.color = 'var(--primary-navy)';
-    tabSignUp.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
-    tabSignIn.style.background = 'transparent';
-    tabSignIn.style.color = 'var(--text-gray)';
-    tabSignIn.style.boxShadow = 'none';
-
-    panelSignUp.style.display = 'block';
-    panelSignIn.style.display = 'none';
+    if (tabSignIn) {
+      tabSignIn.style.background = 'var(--white)';
+      tabSignIn.style.color = 'var(--primary-navy)';
+      tabSignIn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
+    }
+    if (panelSignIn) panelSignIn.style.display = 'block';
+  } else if (tab === 'signup') {
+    if (tabSignUp) {
+      tabSignUp.style.background = 'var(--white)';
+      tabSignUp.style.color = 'var(--primary-navy)';
+      tabSignUp.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
+    }
+    if (panelSignUp) panelSignUp.style.display = 'block';
+  } else if (tab === 'reset') {
+    if (tabReset) {
+      tabReset.style.background = 'var(--white)';
+      tabReset.style.color = 'var(--primary-navy)';
+      tabReset.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
+    }
+    if (panelReset) panelReset.style.display = 'block';
   }
 }
 
@@ -154,6 +169,44 @@ async function handleSignUp(e) {
       showToast(data.message || `Welcome to Super60, ${currentAdmin.full_name}!`);
     } else {
       showToast(data.detail || data.message || 'Registration failed', 'error');
+    }
+  } catch (err) {
+    showToast('Failed to connect to backend API', 'error');
+  }
+}
+
+async function handleResetPassword(e) {
+  e.preventDefault();
+  const email = document.getElementById('resetEmail').value.trim();
+  const new_password = document.getElementById('resetNewPassword').value.trim();
+  const confirm_password = document.getElementById('resetConfirmPassword').value.trim();
+
+  if (new_password !== confirm_password) {
+    showToast('Passwords do not match. Please verify.', 'error');
+    return;
+  }
+  if (new_password.length < 6) {
+    showToast('Password must be at least 6 characters.', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, new_password })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      authToken = data.data.access_token;
+      currentAdmin = data.data.admin;
+      localStorage.setItem('s60_token', authToken);
+      localStorage.setItem('s60_admin', JSON.stringify(currentAdmin));
+      closeModal('loginModal');
+      showAppShell();
+      showToast(data.message || `Password reset successfully! Welcome, ${currentAdmin.full_name}!`);
+    } else {
+      showToast(data.detail || data.message || 'Password reset failed', 'error');
     }
   } catch (err) {
     showToast('Failed to connect to backend API', 'error');

@@ -8,6 +8,9 @@ import threading
 import urllib.request
 import webview
 
+# Default centralized server URL
+DEFAULT_SERVER_URL = "https://s60-inventory.onrender.com"
+
 # Configure base and data paths
 if getattr(sys, "frozen", False):
     EXE_DIR = os.path.dirname(sys.executable)
@@ -16,6 +19,16 @@ else:
     EXE_DIR = os.path.dirname(os.path.abspath(__file__))
     BUNDLE_DIR = EXE_DIR
 
+# Persistent User Data directory for WebView session storage and local DB (survives app exit and PC reboot)
+APP_DATA_DIR = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "S60Inventory")
+WEBVIEW_DATA_DIR = os.path.join(APP_DATA_DIR, "webview_data")
+LOCAL_DB_DIR = os.path.join(APP_DATA_DIR, "database")
+try:
+    os.makedirs(WEBVIEW_DATA_DIR, exist_ok=True)
+    os.makedirs(LOCAL_DB_DIR, exist_ok=True)
+except Exception as e:
+    print(f"[Desktop App] Notice creating data dirs: {e}")
+
 # Config file for centralized server connection
 CONFIG_FILE = os.path.join(EXE_DIR, "s60_config.json")
 
@@ -23,10 +36,29 @@ def load_config():
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                cfg = json.load(f)
+                if cfg.get("server_url"):
+                    return cfg
         except Exception as e:
             print(f"[Desktop App] Warning loading config: {e}")
-    return {}
+
+    bundled_config = os.path.join(BUNDLE_DIR, "s60_config.json")
+    if os.path.exists(bundled_config):
+        try:
+            with open(bundled_config, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+                if cfg.get("server_url"):
+                    save_config(cfg)
+                    return cfg
+        except Exception:
+            pass
+
+    default_cfg = {
+        "server_url": DEFAULT_SERVER_URL,
+        "description": "Connected to central 24/7 cloud server. All laptops and mobile devices sync here in real time."
+    }
+    save_config(default_cfg)
+    return default_cfg
 
 def save_config(cfg):
     try:
@@ -36,18 +68,21 @@ def save_config(cfg):
         print(f"[Desktop App] Warning saving config: {e}")
 
 def init_local_backend():
-    """Initializes local SQLite database and backend environment if needed."""
+    """Initializes local SQLite database in resilient LocalAppData directory."""
     backend_dir = os.path.join(BUNDLE_DIR, "backend")
     if backend_dir not in sys.path:
         sys.path.insert(0, backend_dir)
 
-    db_path = os.path.join(EXE_DIR, "s60inventory.db")
+    # Store local SQLite in LocalAppData so OneDrive never locks/conflicts it
+    db_path = os.path.join(LOCAL_DB_DIR, "s60inventory.db")
     if not os.path.exists(db_path):
         seed_db = os.path.join(BUNDLE_DIR, "backend", "s60inventory.db")
+        if not os.path.exists(seed_db):
+            seed_db = os.path.join(BUNDLE_DIR, "s60inventory.db")
         if os.path.exists(seed_db):
             try:
                 shutil.copy2(seed_db, db_path)
-                print(f"[Desktop App] Seed database copied to {db_path}")
+                print(f"[Desktop App] Seed database initialized at {db_path}")
             except Exception as e:
                 print(f"[Desktop App] Could not copy seed db: {e}")
 
@@ -187,6 +222,8 @@ def main():
     server_url = cfg.get("server_url", "").strip().rstrip("/")
     if not server_url:
         server_url = os.environ.get("S60_SERVER_URL", "").strip().rstrip("/")
+    if not server_url:
+        server_url = DEFAULT_SERVER_URL
 
     # Support command line server argument
     if len(sys.argv) > 1 and sys.argv[1].startswith(("http://", "https://")):
@@ -202,6 +239,11 @@ def main():
     server_thread = None
     if is_cloud:
         print(f"[Desktop App] Connecting to Central Cloud Server: {server_url}")
+        # Quick wake-up probe for cloud server
+        try:
+            wait_for_server(f"{server_url}/health", timeout_sec=6)
+        except Exception:
+            pass
         portal_url = f"{server_url}/portal/?_t={int(time.time())}"
     else:
         # Standalone / Offline Local Server Mode
@@ -237,9 +279,14 @@ def main():
     )
     desktop_api.set_window(window)
 
-    # Start the native window (blocks until user closes window)
+    # Start the native window with persistent session storage
+    # private_mode=False and storage_path ensures login credentials and tokens survive PC reboot and app close
     try:
-        webview.start(debug=False, private_mode=True)
+        webview.start(
+            debug=False,
+            private_mode=False,
+            storage_path=WEBVIEW_DATA_DIR
+        )
     finally:
         if server_thread:
             server_thread.stop()
