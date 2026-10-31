@@ -1,5 +1,5 @@
-// API Base URL (relative path since served by FastAPI backend)
-const API_URL = '/api/v1';
+// API Base URL (relative path proxied by Vercel/FastAPI, or custom cloud URL from localStorage)
+const API_URL = localStorage.getItem('s60_api_url') || '/api/v1';
 
 // Resilient inline SVG trash icon that never collapses or fails even when webfonts/CDN are unavailable
 const TRASH_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 448 512" fill="currentColor" style="display:inline-block; vertical-align:middle; pointer-events:none;"><path d="M135.2 17.7C140.6 6.8 151.7 0 163.8 0H284.2c12.1 0 23.2 6.8 28.6 17.7L320 32h96c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 96 0 81.7 0 64S14.3 32 32 32h96l7.2-14.3zM32 128H416V448c0 35.3-28.7 64-64 64H96c-35.3 0-64-28.7-64-64V128zm96 64c-8.8 0-16 7.2-16 16V432c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16zm96 0c-8.8 0-16 7.2-16 16V432c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16zm96 0c-8.8 0-16 7.2-16 16V432c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16z"/></svg>`;
@@ -104,6 +104,12 @@ async function handleLogin(e) {
   e.preventDefault();
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value.trim();
+  const submitBtn = e.target.querySelector('button[type="submit"]') || document.querySelector('#authPanelSignIn button[type="submit"]');
+  const originalText = submitBtn ? submitBtn.innerHTML : '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing In...';
+  }
 
   try {
     const res = await fetch(`${API_URL}/auth/login`, {
@@ -124,7 +130,12 @@ async function handleLogin(e) {
       showToast(data.detail || data.message || 'Login failed', 'error');
     }
   } catch (err) {
-    showToast('Failed to connect to backend API', 'error');
+    showToast('Connecting to backend... If cloud is warming up, please wait a moment.', 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+    }
   }
 }
 
