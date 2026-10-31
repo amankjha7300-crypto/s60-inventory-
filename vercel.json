@@ -1,19 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "buildCommand": null,
-  "outputDirectory": null,
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/", "destination": "/web/index.html" },
-    { "source": "/portal", "destination": "/web/index.html" },
-    { "source": "/portal/", "destination": "/web/index.html" },
-    { "source": "/portal/:match*", "destination": "/web/:match*" },
-    { "source": "/style.css", "destination": "/web/style.css" },
-    { "source": "/app.js", "destination": "/web/app.js" },
-    { "source": "/manifest.json", "destination": "/web/manifest.json" },
-    { "source": "/vendor/:match*", "destination": "/web/vendor/:match*" },
-    { "source": "/assets/:match*", "destination": "/assets/:match*" },
+    { "source": "/portal", "destination": "/index.html" },
+    { "source": "/portal/", "destination": "/index.html" },
+    { "source": "/portal/:match*", "destination": "/:match*" },
     { "source": "/api/:match*", "destination": "https://s60-inventory.onrender.com/api/:match*" },
     { "source": "/uploads/:match*", "destination": "https://s60-inventory.onrender.com/uploads/:match*" }
   ],
