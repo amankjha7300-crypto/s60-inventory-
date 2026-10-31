@@ -1,13 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "outputDirectory": "public",
   "cleanUrls": true,
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://s60-inventory.onrender.com/api/$1" },
+    { "source": "/uploads/(.*)", "destination": "https://s60-inventory.onrender.com/uploads/$1" },
+    { "source": "/portal/(.*)", "destination": "/$1" },
     { "source": "/portal", "destination": "/index.html" },
-    { "source": "/portal/", "destination": "/index.html" },
-    { "source": "/portal/:match*", "destination": "/:match*" },
-    { "source": "/api/:match*", "destination": "https://s60-inventory.onrender.com/api/:match*" },
-    { "source": "/uploads/:match*", "destination": "https://s60-inventory.onrender.com/uploads/:match*" }
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/((?!assets/|vendor/|.*\\..*).*)$", "destination": "/index.html" }
   ],
   "headers": [
     {
