@@ -1,0 +1,23 @@
+{
+  "name": "S60 Inventory & Rewards",
+  "short_name": "S60 Inventory",
+  "description": "Super60 Inventory & Rewards Management System - Dept of CSE, SVIET",
+  "start_url": "/portal/",
+  "scope": "/portal/",
+  "display": "standalone",
+  "background_color": "#FFF8E8",
+  "theme_color": "#0F2B5B",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/app_icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/app_icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
